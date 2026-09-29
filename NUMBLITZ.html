@@ -1,0 +1,2115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NUMBLITZ | Live Math Game</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><path d='M20 4 L37 35 H3 Z' fill='%23C9A227'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800;900&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --navy:#1B2A4A; --navy2:#13203A; --navy3:#243659; --gold:#C9A227; --gold2:#E6C75C;
+  --teal:#1F8A7A; --coral:#C8553D; --sky:#3E7CB1; --cream:#F7F3E8; --paper:#FFFDF7;
+  --line:rgba(255,255,255,.14); --muted:rgba(255,255,255,.66);
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--navy);color:#fff;-webkit-font-smoothing:antialiased;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+h1,h2,h3,.disp{font-family:'Archivo',system-ui,sans-serif;letter-spacing:-.01em}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--gold2);outline-offset:3px}
+.hidden{display:none!important}
+#app{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+
+/* Buttons */
+.btn{background:var(--gold);color:var(--navy);font-family:'Archivo',sans-serif;font-weight:800;
+  padding:.85em 1.5em;border-radius:12px;font-size:clamp(1rem,1.5vw,1.2rem);transition:transform .12s,background .12s}
+.btn:hover:not(:disabled){background:var(--gold2)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:#fff;border:2px solid var(--line)}
+.btn.ghost:hover{border-color:var(--gold)}
+.btn.block{width:100%}
+.link{color:var(--gold2);text-decoration:underline;text-underline-offset:3px}
+
+/* Brand */
+.mark{display:inline-flex;align-items:center;gap:.5em}
+.mark svg{width:1.1em;height:1.1em;fill:var(--gold)}
+.word{font-family:'Archivo',sans-serif;font-weight:900;line-height:.92}
+.word .by{display:block;font-family:'IBM Plex Sans',sans-serif;font-weight:500;color:rgba(255,255,255,.78);font-size:.3em;margin-top:.35em;letter-spacing:.01em}
+.hbar .bt{display:flex;flex-direction:column;line-height:1.05}
+.hbar .bt small{font-family:'IBM Plex Sans',sans-serif;font-weight:500;font-size:.62em;color:var(--muted);margin-top:3px}
+.word small{display:block;font-weight:600;font-family:'IBM Plex Sans',sans-serif;color:var(--gold);letter-spacing:.02em}
+
+.mode{font-size:.85rem;background:rgba(201,162,39,.14);border:1px solid rgba(201,162,39,.4);color:var(--gold2);
+  padding:.55em .9em;border-radius:10px;line-height:1.4}
+
+/* ---------- Student: join ---------- */
+.join{flex:1;display:grid;place-items:center;padding:24px;position:relative;overflow:hidden}
+.join .bgdelta{position:absolute;width:140vmin;height:140vmin;right:-45vmin;bottom:-50vmin;fill:none;stroke:rgba(201,162,39,.12);stroke-width:1.2;pointer-events:none}
+.join-card{position:relative;width:100%;max-width:400px;display:flex;flex-direction:column;gap:18px}
+.join-card .word{font-size:clamp(2.6rem,11vw,3.4rem)}
+.join-card .word small{font-size:1rem;margin-top:.35em}
+.join-card .word .by{font-size:1.15rem;margin-top:.3em}
+.join-card .word{text-align:center}
+.join-card .word .mark{justify-content:center;width:100%}
+.join-card .field label{text-align:center}
+.join-card #nick{text-align:center;text-transform:uppercase}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:600;font-size:.95rem}
+.field input,.field select,.field textarea{background:#fff;color:var(--navy);border:2px solid transparent;border-radius:12px;padding:.8em .9em;font-size:1.1rem;width:100%}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);outline:none}
+.code-in{font-family:'IBM Plex Mono',monospace;font-size:1.8rem!important;letter-spacing:.35em;text-align:center;font-weight:600}
+.err{color:#FFB4A3;font-size:.95rem;min-height:1.3em}
+.foot-note{text-align:center;color:var(--muted);font-size:.9rem}
+
+/* ---------- Student: states ---------- */
+.pstate{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px;gap:14px}
+.pstate h2{font-size:clamp(1.8rem,7vw,2.6rem);font-weight:900}
+.pstate p{color:var(--muted);font-size:1.1rem;max-width:30ch}
+.pstate .big{font-family:'Archivo',sans-serif;font-weight:900;font-size:clamp(2.6rem,12vw,4rem)}
+.pstate.ok{background:var(--teal)} .pstate.bad{background:var(--coral)}
+.pstate.ok p,.pstate.bad p{color:rgba(255,255,255,.9)}
+.me-tag{position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));background:rgba(0,0,0,.25);padding:.45em .8em;border-radius:10px;font-size:.9rem;font-weight:600}
+.me-tag b{font-family:'IBM Plex Mono',monospace}
+.shape-lg{width:96px;height:96px}
+.shape-lg svg{width:100%;height:100%;fill:#fff}
+.pulse{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.45}}
+
+.pq{flex:1;display:flex;flex-direction:column;padding:14px;gap:12px}
+.pq-top{display:flex;justify-content:space-between;align-items:center;font-size:.95rem;color:var(--muted)}
+.pq-text{background:var(--paper);color:var(--navy);border-radius:var(--r);padding:16px;font-size:1.15rem;line-height:1.45;font-weight:500}
+.pbar{height:6px;background:var(--line);border-radius:6px;overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--gold);width:100%;transform-origin:left}
+.ptiles{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:280px}
+.ptile{border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px;font-size:1.2rem;font-weight:600}
+.ptile .shp{width:38px;height:38px}
+.ptile .shp svg{width:100%;height:100%;fill:currentColor}
+.ptile:disabled{opacity:.35}
+
+/* Tile colors (shared) */
+.c0{background:var(--gold);color:var(--navy)} .c1{background:var(--teal);color:#fff}
+.c2{background:var(--coral);color:#fff} .c3{background:var(--sky);color:#fff}
+
+/* ---------- Host: setup ---------- */
+.setup{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,560px);gap:clamp(24px,5vw,72px);align-items:center;
+  padding:clamp(24px,5vw,64px);max-width:1280px;margin:0 auto;width:100%}
+.setup .word{font-size:clamp(2.6rem,5vw,4.6rem)}
+.setup .word .mark{white-space:nowrap}
+.setup .word small{font-size:clamp(1rem,1.6vw,1.35rem);margin-top:.4em}
+.setup .lede{margin-top:22px;color:var(--muted);font-size:clamp(1rem,1.3vw,1.15rem);max-width:38ch;line-height:1.55}
+.setup .left .mode{margin-top:22px;max-width:44ch}
+.panel{background:var(--cream);color:var(--navy);border-radius:20px;padding:clamp(20px,3vw,34px);display:flex;flex-direction:column;gap:20px;
+  box-shadow:0 0 0 6px rgba(201,162,39,.25)}
+.panel h2{font-size:1.5rem;font-weight:800}
+.panel .field input,.panel .field select,.panel .field textarea{border-color:rgba(27,42,74,.15)}
+.panel .err{color:var(--coral)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0}
+.chip span{display:inline-block;padding:.55em .95em;border-radius:999px;border:2px solid rgba(27,42,74,.2);font-weight:600;font-size:.95rem;background:#fff}
+.chip input:checked+span{background:var(--navy);color:#fff;border-color:var(--navy)}
+.chip input:focus-visible+span{outline:3px solid var(--gold);outline-offset:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.help{font-size:.88rem;color:rgba(27,42,74,.72);line-height:1.5}
+.help code{font-family:'IBM Plex Mono',monospace;background:rgba(27,42,74,.08);padding:.1em .35em;border-radius:5px;font-size:.92em}
+.panel textarea{min-height:150px;font-family:'IBM Plex Mono',monospace;font-size:.9rem!important;line-height:1.5;resize:vertical}
+
+/* ---------- Host: shared bars ---------- */
+.hbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px clamp(16px,3vw,36px);border-bottom:1px solid var(--line)}
+.hbar .mark{font-family:'Archivo',sans-serif;font-weight:900;font-size:1.25rem}
+.hbar .meta{font-family:'IBM Plex Mono',monospace;color:var(--muted);font-size:clamp(.95rem,1.4vw,1.15rem)}
+.hfoot{display:flex;justify-content:flex-end;gap:12px;padding:14px clamp(16px,3vw,36px)}
+
+/* ---------- Host: lobby ---------- */
+.lobby{flex:1;display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:clamp(20px,4vw,56px);padding:clamp(20px,4vw,48px)}
+.joinbox{background:var(--cream);color:var(--navy);border-radius:20px;padding:clamp(20px,3vw,32px);display:flex;flex-direction:column;gap:14px;align-self:start}
+.joinbox .url{font-weight:600;word-break:break-all;font-size:clamp(1rem,1.5vw,1.2rem)}
+.joinbox .lbl{font-size:.95rem;color:rgba(27,42,74,.7)}
+.codebig{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:clamp(3rem,7vw,5.6rem);letter-spacing:.08em;line-height:1}
+#qr{align-self:flex-start;background:#fff;padding:10px;border-radius:12px}
+#qr img,#qr canvas{display:block;width:170px;height:170px}
+.roster{display:flex;flex-direction:column;gap:18px;min-width:0}
+.roster h2{font-size:clamp(1.6rem,3vw,2.4rem);font-weight:900;display:flex;align-items:baseline;gap:.4em}
+.roster h2 b{font-family:'IBM Plex Mono',monospace;color:var(--gold)}
+.names{display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start}
+.name{display:inline-flex;align-items:center;gap:8px;background:var(--navy3);border:1px solid var(--line);padding:.5em .6em .5em 1em;border-radius:999px;font-weight:600;font-size:clamp(1rem,1.5vw,1.25rem);animation:pop .25s ease-out}
+.name button{width:26px;height:26px;border-radius:50%;color:var(--muted);font-size:1.1rem;line-height:1}
+.name button:hover{background:rgba(255,255,255,.1);color:#fff}
+@keyframes pop{from{transform:scale(.8);opacity:0}}
+.empty{color:var(--muted);font-size:1.1rem;padding:24px 0}
+
+/* ---------- Host: question ---------- */
+.hq{flex:1;display:flex;flex-direction:column;min-height:0}
+.stage{flex:1;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:clamp(16px,3vw,48px);padding:clamp(16px,3vw,40px) clamp(16px,4vw,56px)}
+.qtext{background:var(--paper);color:var(--navy);border-radius:20px;padding:clamp(20px,3vw,40px);
+  font-size:clamp(1.5rem,3.4vw,3rem);font-weight:600;line-height:1.3}
+.qtext .katex{font-size:1.08em}
+.qtext{font-size:clamp(1.25rem,2.6vw,2.3rem)}
+.qfig{margin-top:.6em;display:flex;justify-content:center}
+.qfig svg{height:clamp(120px,26vh,260px);width:auto;max-width:100%}
+.qfig svg.strip{height:auto;width:min(100%,780px)}
+.pq-text .qfig svg{height:140px}
+.pq-text .qfig svg.coord,.pq-text .qfig svg.transform,.pq-text .qfig svg.angles,.pq-text .qfig svg.measure,.pq-text .qfig svg.solid{height:min(48vh,320px);width:auto;max-width:100%}
+.qfig svg.net{height:clamp(220px,36vh,380px);width:auto;max-width:100%}
+.pq-text .qfig svg.net{height:min(48vh,340px);width:auto;max-width:100%}
+.pq-text .qfig svg.balance{height:auto;width:100%;max-height:270px}
+.pq-text .qfig svg.strip{height:auto;width:100%}
+.qfig svg.stats{height:clamp(210px,36vh,360px);width:auto;max-width:100%}
+.pq-text .qfig svg.stats{height:auto;width:100%;max-height:42vh}
+.timer{position:relative;width:clamp(120px,15vw,210px);aspect-ratio:120/108}
+.timer svg{width:100%;height:100%;overflow:visible}
+.timer .bg{fill:none;stroke:var(--line);stroke-width:9;stroke-linejoin:round}
+.timer .fg{fill:none;stroke:var(--gold);stroke-width:9;stroke-linejoin:round;stroke-linecap:butt;stroke-dasharray:100;transition:stroke .3s}
+.timer.low .fg{stroke:var(--coral)}
+.timer span{position:absolute;left:0;right:0;top:44%;text-align:center;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:clamp(1.8rem,3.4vw,3rem)}
+.answered{text-align:right}
+.answered b{display:block;font-family:'IBM Plex Mono',monospace;font-size:clamp(1.6rem,3vw,2.6rem);line-height:1}
+.answered span{color:var(--muted);font-size:.95rem}
+.htiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 clamp(16px,4vw,56px)}
+.htile{position:relative;border-radius:16px;display:flex;align-items:center;gap:clamp(12px,1.6vw,22px);padding:clamp(14px,2vw,26px) clamp(16px,2vw,28px);
+  font-size:clamp(1.3rem,2.6vw,2.3rem);font-weight:600;min-height:clamp(84px,14vh,150px);transition:opacity .3s,filter .3s}
+.htile .shp{flex:none;width:clamp(30px,3.2vw,50px);height:clamp(30px,3.2vw,50px)}
+.htile .shp svg{width:100%;height:100%;fill:currentColor}
+.htile .cnt{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:.8em;display:none}
+.htiles.rev .cnt{display:block}
+.htiles.rev .htile.dim{opacity:.28;filter:saturate(.4)}
+.htile .ok{display:none;width:1.1em;height:1.1em}
+.htiles.rev .htile.right .ok{display:block}
+
+/* ---------- Host: leaderboard / end ---------- */
+.board{flex:1;display:flex;flex-direction:column;align-items:center;padding:clamp(20px,4vw,48px);gap:clamp(16px,2.4vw,28px)}
+.board h2{font-size:clamp(2rem,4vw,3.4rem);font-weight:900}
+.ranks{list-style:none;width:100%;max-width:880px;display:flex;flex-direction:column;gap:10px}
+.ranks li{display:grid;grid-template-columns:3.2em minmax(0,1fr) auto auto;align-items:center;gap:16px;background:var(--navy3);border:1px solid var(--line);
+  border-radius:14px;padding:clamp(12px,1.6vw,18px) clamp(16px,2vw,24px);font-size:clamp(1.15rem,2vw,1.7rem);font-weight:600}
+.ranks li:first-child{background:var(--gold);color:var(--navy);border-color:var(--gold)}
+.ranks .pos{font-family:'IBM Plex Mono',monospace;opacity:.7}
+.ranks .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ranks .pts{font-family:'IBM Plex Mono',monospace}
+.ranks .gain{font-family:'IBM Plex Mono',monospace;font-size:.7em;opacity:.7;min-width:4.5em;text-align:right}
+
+.podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;gap:clamp(10px,2vw,24px);width:100%;max-width:880px;margin-top:8px}
+.pod{display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0}
+.pod .nm{font-family:'Archivo',sans-serif;font-weight:800;font-size:clamp(1.1rem,2.2vw,1.9rem);text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pod .pts{font-family:'IBM Plex Mono',monospace;color:var(--muted)}
+.pod .blk{width:100%;border-radius:14px 14px 0 0;display:grid;place-items:start center;padding-top:14px;font-family:'Archivo',sans-serif;font-weight:900;font-size:clamp(2rem,4vw,3.4rem);
+  transform-origin:bottom;animation:rise .9s cubic-bezier(.2,.8,.2,1) both}
+.pod.p1 .blk{height:clamp(150px,24vh,240px);background:var(--gold);color:var(--navy);animation-delay:1.2s}
+.pod.p2 .blk{height:clamp(110px,17vh,170px);background:#B9C3D6;color:var(--navy);animation-delay:.6s}
+.pod.p3 .blk{height:clamp(80px,12vh,120px);background:#B98552;color:#fff;animation-delay:0s}
+.pod.p1 .nm,.pod.p1 .pts{animation:fade .5s 1.9s both}
+.pod.p2 .nm,.pod.p2 .pts{animation:fade .5s 1.3s both}
+.pod.p3 .nm,.pod.p3 .pts{animation:fade .5s .7s both}
+@keyframes rise{from{transform:scaleY(0)}}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}}
+
+.summary{width:100%;max-width:880px;background:var(--cream);color:var(--navy);border-radius:18px;padding:clamp(18px,2.4vw,28px);display:flex;flex-direction:column;gap:12px}
+.summary h3{font-size:1.25rem;font-weight:800}
+.hard{list-style:none;display:flex;flex-direction:column;gap:8px}
+.hard li{display:grid;grid-template-columns:4.2em minmax(0,1fr);gap:12px;align-items:baseline;line-height:1.4}
+.hard b{font-family:'IBM Plex Mono',monospace;color:var(--coral)}
+.actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+
+#snd{position:fixed;z-index:20;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(255,255,255,.1);color:#fff;border:1px solid var(--line)}
+#snd:hover{background:rgba(255,255,255,.18)}
+#snd svg{width:22px;height:22px}
+body.is-host #snd{left:clamp(16px,3vw,36px);bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+body:not(.is-host) #snd{right:12px;top:calc(10px + env(safe-area-inset-top,0px))}
+body:not(.is-host) .pq-top{padding-right:52px}
+@media (max-width:860px){
+  .setup,.lobby{grid-template-columns:1fr}
+  .stage{grid-template-columns:1fr;justify-items:center}
+  .htiles{grid-template-columns:1fr}
+  .ranks li{grid-template-columns:2.4em minmax(0,1fr) auto}
+  .ranks .gain{display:none}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* Refreshed visual system */
+:root{--navy:#0B1730;--navy2:#091227;--navy3:#1A3054;--gold:#FFD35A;--gold2:#FFE68D;--teal:#12A994;--coral:#F16C69;--sky:#4D95E8;--cream:#F5F7FC;--paper:#FFFFFF;--line:rgba(255,255,255,.18);--muted:#C5D3EB;--r:22px}
+body{background:radial-gradient(circle at 12% 8%,rgba(80,135,222,.28),transparent 35%),radial-gradient(circle at 92% 84%,rgba(255,211,90,.15),transparent 32%),linear-gradient(135deg,#0B1730,#132A4E 60%,#081126);background-attachment:fixed}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;opacity:.16;background-image:linear-gradient(rgba(255,255,255,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.12) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,transparent,#000)}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221440%22%20height%3D%22900%22%20viewBox%3D%220%200%201440%20900%22%3E%0A%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23FFD35A%22%20stop-opacity%3D%22.46%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%2368AAFF%22%20stop-opacity%3D%22.12%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%0A%3Cg%20fill%3D%22none%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%222%22%3E%0A%3Ccircle%20cx%3D%221130%22%20cy%3D%22290%22%20r%3D%22225%22%2F%3E%3Ccircle%20cx%3D%221130%22%20cy%3D%22290%22%20r%3D%22185%22%2F%3E%3Ccircle%20cx%3D%221130%22%20cy%3D%22290%22%20r%3D%22145%22%2F%3E%0A%3Cpath%20d%3D%22M905%20290h450M1130%2065v450%22%2F%3E%3Cpath%20d%3D%22M1035%20180l200%20200m0-200l-200%20200%22%20opacity%3D%22.36%22%2F%3E%0A%3Cpath%20d%3D%22M90%20585L295%20230%20500%20585Z%22%20stroke-width%3D%224%22%2F%3E%3Cpath%20d%3D%22M152%20550L295%20305%20438%20550Z%22%20opacity%3D%22.5%22%2F%3E%0A%3Cpath%20d%3D%22M735%20785h530M825%20875V640%22%2F%3E%3Cpath%20d%3D%22M842%20835c80-4%2090-150%20168-150%2071%200%2092%2096%20199-15%22%20stroke%3D%22%2371D6CB%22%20stroke-opacity%3D%22.32%22%20stroke-width%3D%225%22%2F%3E%0A%3Ccircle%20cx%3D%22530%22%20cy%3D%22120%22%20r%3D%226%22%20fill%3D%22%23FFD35A%22%2F%3E%3Ccircle%20cx%3D%22630%22%20cy%3D%22170%22%20r%3D%225%22%20fill%3D%22%23FFD35A%22%2F%3E%3Ccircle%20cx%3D%22710%22%20cy%3D%2290%22%20r%3D%224%22%20fill%3D%22%23FFD35A%22%2F%3E%0A%3C%2Fg%3E%3Cg%20fill%3D%22%23FBE4A0%22%20fill-opacity%3D%22.15%22%20font-family%3D%22Georgia%2Cserif%22%20font-weight%3D%22bold%22%3E%3Ctext%20x%3D%2244%22%20y%3D%22212%22%20font-size%3D%22118%22%3E%CE%A3%3C%2Ftext%3E%3Ctext%20x%3D%22525%22%20y%3D%22735%22%20font-size%3D%2296%22%3E%CF%80%3C%2Ftext%3E%3Ctext%20x%3D%221260%22%20y%3D%22745%22%20font-size%3D%22100%22%3E%E2%88%9E%3C%2Ftext%3E%3Ctext%20x%3D%22700%22%20y%3D%22370%22%20font-size%3D%2268%22%3Ex%C2%B2%3C%2Ftext%3E%3C%2Fg%3E%0A%3Cg%20fill%3D%22%2389C6FF%22%20fill-opacity%3D%22.22%22%3E%3Ccircle%20cx%3D%22370%22%20cy%3D%2295%22%20r%3D%225%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22140%22%20r%3D%223%22%2F%3E%3Ccircle%20cx%3D%221320%22%20cy%3D%22615%22%20r%3D%227%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%22760%22%20r%3D%224%22%2F%3E%3C%2Fg%3E%0A%3C%2Fsvg%3E");background-size:cover;background-position:center;opacity:.84}
+#app{position:relative;z-index:1}
+.join-card::before{content:'';display:block;width:70px;height:5px;border-radius:20px;background:linear-gradient(90deg,var(--gold),#79C7FF);box-shadow:0 0 24px rgba(255,211,90,.6)}
+.setup .left::after{content:'△  ○  ◇  □';display:block;margin-top:34px;letter-spacing:.5em;color:rgba(255,211,90,.38);font-size:clamp(2rem,4vw,4rem);font-weight:900}
+@media(max-width:680px){body::after{background-size:auto 100%;background-position:57% center;opacity:.45}.setup .left::after{display:none}}
+
+.btn{border-radius:16px;box-shadow:0 10px 28px rgba(0,0,0,.22);padding:.95em 1.6em;transition:transform .18s,box-shadow .18s,background .18s}
+.btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 15px 34px rgba(0,0,0,.26)}
+.btn.ghost{box-shadow:none;background:rgba(255,255,255,.08)}
+.join-card{max-width:460px;padding:clamp(25px,5vw,42px);border:1px solid rgba(255,255,255,.2);border-radius:30px;background:linear-gradient(145deg,rgba(255,255,255,.14),rgba(255,255,255,.045));box-shadow:0 30px 80px rgba(0,0,0,.35);backdrop-filter:blur(15px);gap:20px}
+.join-card .word{font-size:clamp(1.9rem,8vw,2.5rem)}
+.join-card::before{margin-inline:auto}
+.field input,.field select,.field textarea{border-radius:15px;box-shadow:0 5px 18px rgba(8,20,42,.08)}
+.panel,.joinbox,.summary{border-radius:28px;box-shadow:0 22px 65px rgba(0,0,0,.24)}
+.panel{border:1px solid rgba(255,255,255,.8);box-shadow:0 25px 75px rgba(0,0,0,.3)}
+.chip span{border-radius:14px;transition:transform .15s,background .15s}
+.chip:hover span{transform:translateY(-2px)}
+.chip input:checked+span{background:#183460;border-color:#183460;box-shadow:0 7px 18px rgba(24,52,96,.25)}
+.hbar{background:rgba(5,15,33,.44);backdrop-filter:blur(12px)}
+.hfoot{background:rgba(5,15,33,.22)}
+.name,.ranks li{box-shadow:0 10px 25px rgba(0,0,0,.16)}
+.qtext,.pq-text{box-shadow:0 18px 44px rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.75)}
+.htile,.ptile{border:2px solid rgba(255,255,255,.16);box-shadow:0 12px 28px rgba(0,0,0,.18)}
+.ptile:not(:disabled):active{transform:scale(.97)}
+.c0{background:#F5C842;color:#15243C}.c1{background:#16A393;color:#fff}.c2{background:#DF6575;color:#fff}.c3{background:#4B88D9;color:#fff}
+.pstate:not(.ok):not(.bad){max-width:600px;width:calc(100% - 32px);margin:24px auto;border-radius:30px;background:rgba(255,255,255,.09);border:1px solid var(--line);box-shadow:0 22px 65px rgba(0,0,0,.24)}
+.pstate.ok,.pstate.bad{background:linear-gradient(145deg,var(--teal),#096759);margin:18px;border-radius:26px}.pstate.bad{background:linear-gradient(145deg,var(--coral),#A33C49)}
+@media(max-width:520px){.join{padding:16px}.join-card{padding:25px 20px}.pq{padding:10px}.ptiles{min-height:250px}.hbar{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<button id="snd" type="button"></button>
+
+<script>
+/* =====================================================================
+   NUMBLITZ
+   1) Crea un proyecto en Supabase y ejecuta supabase_setup.sql
+   2) Pega aquí la URL del proyecto y la clave "anon public"
+   Si se dejan vacías, el juego corre en MODO DE PRUEBA (pestañas del mismo navegador).
+   ===================================================================== */
+const CONFIG = {
+  SUPABASE_URL: 'https://fpqmmpjcreofyujkfrda.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_PvlttSZZTobD3qcfb8-s8Q_elIOLyn0'
+};
+const TEACHER = 'MR. RAMOS';   // teacher name shown under "NUMBLITZ"
+const LOCAL = !(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY);
+
+/* ---------------- Data layer (same interface for Supabase and local test) ---------------- */
+function SupaDB(){
+  const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  const ok = ({data,error}) => { if(error) throw error; return data; };
+  return {
+    async insert(t,row){ return ok(await sb.from(t).insert(row).select().single()); },
+    async update(t,id,patch){ ok(await sb.from(t).update(patch).eq('id',id)); },
+    async upsert(t,rows){ if(rows.length) ok(await sb.from(t).upsert(rows)); },
+    async remove(t,id){ ok(await sb.from(t).delete().eq('id',id)); },
+    async get(t,id){ return ok(await sb.from(t).select('*').eq('id',id).maybeSingle()); },
+    async list(t,col,val){ return ok(await sb.from(t).select('*').eq(col,val)); },
+    async activeGameByCode(code){
+      return ok(await sb.from('games').select('*').eq('code',code).neq('status','ended')
+        .order('created_at',{ascending:false}).limit(1).maybeSingle());
+    },
+    watch(t,event,col,val,cb){
+      const ch = sb.channel(`${t}-${val}-${Math.random().toString(36).slice(2)}`)
+        .on('postgres_changes',{event,schema:'public',table:t,filter:`${col}=eq.${val}`},p=>cb(p.new))
+        .subscribe();
+      return () => sb.removeChannel(ch);
+    }
+  };
+}
+function LocalDB(){
+  const K='retodelta.local.'; const bc=('BroadcastChannel' in window)?new BroadcastChannel('retodelta'):null;
+  const ls=new Set();
+  const load=t=>{try{return JSON.parse(localStorage.getItem(K+t))||[]}catch(e){return[]}};
+  const save=(t,r)=>{try{localStorage.setItem(K+t,JSON.stringify(r))}catch(e){}};
+  const fire=m=>ls.forEach(l=>{ if(l.t===m.t&&(l.e==='*'||l.e===m.e)&&m.row&&m.row[l.col]===l.val) l.cb(m.row); });
+  if(bc) bc.onmessage=e=>fire(e.data);
+  const emit=m=>{ if(bc) bc.postMessage(m); fire(m); };
+  const uid=()=>crypto.randomUUID?crypto.randomUUID():'id'+Date.now()+Math.random().toString(16).slice(2);
+  return {
+    reset(){ ['games','players','answers'].forEach(t=>save(t,[])); },
+    async insert(t,row){
+      const rows=load(t);
+      if(t==='players'&&rows.some(r=>r.game_id===row.game_id&&r.nickname.toLowerCase()===row.nickname.toLowerCase())) throw {code:'23505'};
+      if(t==='answers'&&rows.some(r=>r.player_id===row.player_id&&r.q_index===row.q_index)) throw {code:'23505'};
+      const r={id:uid(),created_at:new Date().toISOString(),score:0,...row}; rows.push(r); save(t,rows);
+      emit({t,e:'INSERT',row:r}); return r;
+    },
+    async update(t,id,patch){ const rows=load(t); const i=rows.findIndex(r=>r.id===id); if(i<0) return;
+      rows[i]={...rows[i],...patch}; save(t,rows); emit({t,e:'UPDATE',row:rows[i]}); },
+    async upsert(t,list){ const rows=load(t);
+      list.forEach(p=>{ const i=rows.findIndex(r=>r.id===p.id); if(i<0) rows.push(p); else rows[i]={...rows[i],...p}; });
+      save(t,rows); list.forEach(p=>emit({t,e:'UPDATE',row:rows.find(r=>r.id===p.id)})); },
+    async remove(t,id){ save(t,load(t).filter(r=>r.id!==id)); },
+    async get(t,id){ return load(t).find(r=>r.id===id)||null; },
+    async list(t,col,val){ return load(t).filter(r=>r[col]===val); },
+    async activeGameByCode(code){ return load('games').filter(g=>g.code===code&&g.status!=='ended').pop()||null; },
+    watch(t,e,col,val,cb){ const l={t,e,col,val,cb}; ls.add(l); return ()=>ls.delete(l); }
+  };
+}
+const db = LOCAL ? LocalDB() : SupaDB();
+
+/* ---------------- Helpers ---------------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function renderMath(el){
+  if(window.renderMathInElement) renderMathInElement(el,{delimiters:[{left:'\\(',right:'\\)',display:false}],throwOnError:false});
+}
+function view(html){ const r=$('#app'); r.innerHTML=html; renderMath(r); window.scrollTo(0,0); return r; }
+const DELTA='<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 L37 35 H3 Z"/></svg>';
+const SHAPES=[
+  '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 5 L36 34 H4 Z"/></svg>',
+  '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="15"/></svg>',
+  '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3 L37 20 L20 37 L3 20 Z"/></svg>',
+  '<svg viewBox="0 0 40 40" aria-hidden="true"><rect x="6" y="6" width="28" height="28" rx="2"/></svg>'
+];
+const SHAPE_NAMES=['triangle','circle','diamond','square'];
+const CHECK='<svg class="ok" viewBox="0 0 24 24" aria-label="Correcta"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const fmtPts=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+
+/*GEN-START*/
+/* ---------------- Utilidades ---------------- */
+const R=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b];}return a||1;};
+const lcm=(a,b)=>a/gcd(a,b)*b;
+const M=s=>`\\(${s}\\)`;
+const NB='\u00A0';
+const sep=s=>s.replace(/\B(?=(\d{3})+(?!\d))/g,NB);
+const fmt=n=>(n<0?'-':'')+sep(String(Math.abs(n)));            // 1 080
+const money=n=>'$'+fmt(n);                                         // $7 700
+const tnum=n=>(n<0?'-':'')+String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'\\,'); // TeX 1\,000
+const SC=1000000;                                                  // decimales como enteros ×10^6
+const dstr=v=>{const neg=v<0;v=Math.abs(v);const ip=Math.floor(v/SC);const fp=String(v%SC).padStart(6,'0').replace(/0+$/,'');return (neg?'-':'')+sep(String(ip))+(fp?','+fp:'');};
+const dtex=v=>dstr(v).replace(/,/g,'{,}').split(NB).join('\\,');
+const D=(x,dp)=>Math.round(x*SC);                                  // helper para literales
+const pct=v=>(Number.isInteger(v)?fmt(v):String(v).replace('.',','))+'%';
+const WORD=['zero','one','two','three','four','five','six','seven','eight','nine','ten'];
+const cap=s=>s[0].toUpperCase()+s.slice(1);
+const art=w=>/^[aeiou]/i.test(w)?'an':'a';
+const frac=(n,d)=>`\\frac{${n}}{${d}}`;
+const mixed=(w,n,d)=>`${w}\\tfrac{${n}}{${d}}`;
+const ratio=(a,b)=>M(`${a} : ${b}`);
+
+/* Contextos: evitar repetir dentro del mismo juego */
+const USED=new Set();
+function fresh(pool,tag){const av=pool.filter((_,i)=>!USED.has(tag+i));const src=av.length?av:pool;const it=pick(src);USED.add(tag+pool.indexOf(it));return it;}
+const NAMES=[['Martina','f'],['Diego','m'],['Sofía','f'],['Tomás','m'],['Camila','f'],['José','m'],['Valentina','f'],['Benjamín','m'],['Isidora','f'],['Matías','m'],['Florencia','f'],['Vicente','m'],['Catalina','f'],['Agustín','m'],['Josefa','f'],['Joaquín','m'],['Antonella','f'],['Cristóbal','m'],['Trinidad','f'],['Bastián','m'],['Elena','f'],['Lucas','m'],['Amanda','f'],['Maximiliano','m']];
+function who(){const [n,g]=fresh(NAMES,'nm');const f=g==='f';return {n,he:f?'she':'he',He:f?'She':'He',his:f?'her':'his',him:f?'her':'him'};}
+
+/* Opciones */
+const opt=(key,disp)=>({key:String(key),disp});
+function mc(text,correct,wrongs,meta,fig){
+  if(!correct) return null;
+  const seen=new Set([correct.key]),opts=[correct];
+  for(const w of wrongs){ if(w&&!seen.has(w.key)){seen.add(w.key);opts.push(w);} if(opts.length===4)break; }
+  if(opts.length<4) return null;
+  shuffle(opts);
+  const q={text,choices:opts.map(o=>o.disp),correct:opts.indexOf(correct),meta};
+  if(fig) q.fig=fig;
+  return q;
+}
+function nums(ans,list,f,step=1,ok=v=>v>0){
+  const out=[...list]; for(const k of shuffle([1,2,3,4,5,-1,-2,-3,-4,-5])) out.push(ans+k*step);
+  return out.filter(v=>Number.isInteger(v)&&ok(v)&&v!==ans).map(v=>opt(v,f(v)));
+}
+const frOpt=(n,d,unit='')=>{const g=gcd(n,d);return opt((n/g)+'/'+(d/g),M(d/g===1?String(n/g):frac(n/g,d/g))+unit);};
+
+/* =====================================================================
+   1. NUMBERS
+   ===================================================================== */
+const STORES=[
+  {at:'at a bookstore',items:[['notebook','notebooks',1200,2500],['pencil','pencils',250,600],['eraser','erasers',300,700],['ruler','rulers',500,1200],['pen','pens',400,900],['folder','folders',700,1500]]},
+  {at:'at the school kiosk',items:[['sandwich','sandwiches',1500,2800],['juice box','juice boxes',500,1000],['fruit cup','fruit cups',700,1300],['yogurt','yogurts',500,900],['cookie','cookies',200,500]]},
+  {at:'at a sports shop',items:[['tennis ball','tennis balls',800,1800],['water bottle','water bottles',2000,4500],['pair of socks','pairs of socks',1500,3000],['cap','caps',2500,4500]]},
+  {at:'at the feria',items:[['avocado','avocados',400,900],['pineapple','pineapples',1500,2500],['melon','melons',1200,2200],['bag of lemons','bags of lemons',800,1500]]},
+  {at:'at a toy store',items:[['toy car','toy cars',1500,3000],['puzzle','puzzles',4500,8000],['sticker pack','sticker packs',600,1200],['ball','balls',900,1800]]},
+  {at:'at a bakery',items:[['croissant','croissants',600,1200],['empanada','empanadas',1500,2800],['slice of cake','slices of cake',1800,3000],['bag of marraquetas','bags of marraquetas',1000,2000]]},
+  {at:'at a craft store',items:[['paintbrush','paintbrushes',700,1500],['glue stick','glue sticks',500,900],['sheet of cardboard','sheets of cardboard',300,700],['box of crayons','boxes of crayons',1800,3200]]},
+  {at:'at the cinema snack bar',items:[['bag of popcorn','bags of popcorn',2500,4000],['bottle of water','bottles of water',1500,2500],['candy bar','candy bars',900,1600],['sandwich','sandwiches',3000,4500]]},
+  {at:'at a grocery store',items:[['loaf of bread','loaves of bread',1200,2500],['bag of rice','bags of rice',1000,2500],['carton of milk','cartons of milk',1200,2200],['bag of apples','bags of apples',1800,3000]]}
+];
+const price=it=>R(it[2]/50,it[3]/50)*50;
+const NUM={
+  total(){
+    const st=fresh(STORES,'st'), it=shuffle([...st.items]).slice(0,3), p=it.map(price), q=[R(2,5),R(2,6),R(2,4)], w=who();
+    const T=q[0]*p[0]+q[1]*p[1]+q[2]*p[2];
+    const text=`${w.n} is ${st.at}. ${cap(art(it[0][0]))} ${it[0][0]} costs ${money(p[0])}, ${art(it[1][0])} ${it[1][0]} costs ${money(p[1])} and ${art(it[2][0])} ${it[2][0]} costs ${money(p[2])}. ${w.He} buys ${q[0]} ${it[0][1]}, ${q[1]} ${it[1][1]} and ${q[2]} ${it[2][1]}. How much does ${w.he} pay in total?`;
+    return mc(text,opt(T,money(T)),nums(T,[q[0]*p[0]+q[1]*p[1]+p[2],p[0]+p[1]+p[2],T-p[1],T+p[0],T-1000,T+1000],money,100),{t:'total',p,q});
+  },
+  change(){
+    const st=fresh(STORES,'st'), it=shuffle([...st.items]).slice(0,2), p=it.map(price), q=[R(2,4),R(2,4)], w=who();
+    const T=q[0]*p[0]+q[1]*p[1]; const bill=[5000,10000,20000].find(b=>b>=T+500); if(!bill) return null;
+    const C=bill-T;
+    const text=`${w.n} buys ${q[0]} ${it[0][1]} and ${q[1]} ${it[1][1]} ${st.at}. Each ${it[0][0]} costs ${money(p[0])} and each ${it[1][0]} costs ${money(p[1])}. ${w.He} pays with a ${money(bill)} bill. How much change does ${w.he} receive?`;
+    return mc(text,opt(C,money(C)),nums(C,[T,bill-(p[0]+p[1]),C+p[1],C-p[0],C+1000],money,100),{t:'change',p,q,bill});
+  },
+  chain(){
+    const T=fresh([
+      [[4,12],[5,20],[3,15],'pencils',(a,b,c)=>`A packet contains ${a} pencils. Each box contains ${b} packets. How many pencils are there in ${c} boxes?`],
+      [[30,30],[6,12],[4,15],'eggs',(a,b,c)=>`A tray holds ${a} eggs and a crate holds ${b} trays. A farm in Limache sends ${c} crates to the market. How many eggs does it send?`],
+      [[20,40],[4,8],[3,12],'books',(a,b,c)=>`Each shelf in the school library holds ${a} books, and each bookcase has ${b} shelves. The library has ${c} full bookcases. How many books are there?`],
+      [[12,30],[8,25],[4,12],'seats',(a,b,c)=>`A section of the stadium has ${b} rows with ${a} seats in each row. How many seats are there in ${c} identical sections?`],
+      [[6,15],[5,10],[3,9],'stickers',(a,b,c,w)=>`A sheet has ${a} stickers and each album pack contains ${b} sheets. ${w.n} buys ${c} packs. How many stickers does ${w.he} get?`],
+      [[12,24],[6,15],[3,10],'seedlings',(a,b,c)=>`A greenhouse tray holds ${a} seedlings. Each rack holds ${b} trays, and the greenhouse has ${c} racks. How many seedlings are in the greenhouse?`],
+      [[24,24],[20,40],[3,8],'juice boxes',(a,b,c)=>`A carton holds ${a} juice boxes. A delivery truck carries ${b} cartons per trip. How many juice boxes does it deliver in ${c} trips?`],
+      [[8,16],[10,25],[4,12],'crayons',(a,b,c)=>`A box has ${a} crayons. A school orders ${b} boxes for each classroom. How many crayons does it need for ${c} classrooms?`]
+    ],'ch');
+    const a=R(...T[0]),b=R(...T[1]),c=R(...T[2]),A=a*b*c,u=` ${T[3]}`;
+    return mc(T[4](a,b,c,who()),opt(A,fmt(A)+u),nums(A,[a*b,a*b+c,A+a*b,a*(b+c),A-a*b,a*b*c+a*c],v=>fmt(v)+u,10),{t:'chain',a,b,c});
+  },
+  order(){
+    const f=R(1,6); let tex,ans,wrong=[];
+    if(f===1){const a=R(10,60),b=R(3,9),c=R(4,15);tex=`${a} + ${b} \\cdot ${c}`;ans=a+b*c;wrong=[(a+b)*c,a+b+c,a*b+c];}
+    else if(f===2){const b=R(3,9),c=R(3,9),a=b*c+R(5,60);tex=`${a} - ${b} \\cdot ${c}`;ans=a-b*c;wrong=[(a-b)*c,a-b-c,a-b+c];}
+    else if(f===3){const a=R(3,9),b=R(3,12),c=R(3,9),d=R(2,9);tex=`${a} \\cdot ${b} + ${c} \\cdot ${d}`;ans=a*b+c*d;wrong=[(a*b+c)*d,a*(b+c)*d,a+b+c+d];}
+    else if(f===4){const c=R(2,9),b=c*R(2,12),a=R(5,50);tex=`${a} + ${b} : ${c}`;ans=a+b/c;wrong=[(a+b)/c,a+b-c,a+b*c];}
+    else if(f===5){const a=R(2,12),b=R(2,12),c=R(3,8),d=R(2,20);tex=`(${a} + ${b}) \\cdot ${c} - ${d}`;ans=(a+b)*c-d;wrong=[a+b*c-d,(a+b)*(c-d),(a+b)*c+d];}
+    else {const d=R(2,6),c=d*R(2,9),a=R(4,12),b=R(4,12);tex=`${a} \\cdot ${b} - ${c} : ${d}`;ans=a*b-c/d;wrong=[(a*b-c)/d,a*b-c-d,a*(b-c/d)];}
+    return mc(`Evaluate ${M(tex)}`,opt(ans,fmt(ans)),nums(ans,wrong,fmt,2,v=>v>0),{t:'order',tex});
+  },
+  expr(){
+    const a=R(3,9),b=R(5,15),c=R(2,b-1),w=who();
+    const T=fresh([
+      [1,`A teacher buys ${a} packs of markers with ${b} markers in each pack, then gives away ${c} markers. Which expression shows how many markers the teacher has left?`],
+      [1,`${w.n} bakes ${a} trays of cookies with ${b} cookies on each tray. ${w.He} gives ${c} cookies to ${w.his} neighbors. Which expression shows how many cookies are left?`],
+      [1,`A theater has ${a} rows with ${b} seats in each row. ${c} seats are broken. Which expression shows how many seats can be used?`],
+      [1,`A farmer plants ${a} rows of lettuce with ${b} plants in each row. Rabbits eat ${c} plants. Which expression shows how many plants remain?`],
+      [1,`A coach buys ${a} nets with ${b} balls in each net. During practice, ${c} balls are lost. Which expression shows how many balls the coach still has?`],
+      [2,`${w.n} has ${c} stamps. ${w.He} buys ${a} packs with ${b} stamps in each pack. Which expression shows how many stamps ${w.he} has now?`],
+      [2,`A library has ${c} books. It receives ${a} boxes with ${b} books in each box. Which expression shows the total number of books?`],
+      [2,`A bus already has ${c} passengers. At the next stop, ${a} groups of ${b} tourists get on. Which expression shows how many passengers are on the bus now?`],
+      [2,`A mural has ${c} painted tiles. The art club adds ${a} rows with ${b} tiles in each row. Which expression shows how many painted tiles there are now?`]
+    ],'ex');
+    let C,W;
+    if(T[0]===1){ if(a+b*c===a*b-c) return null; C=`${a} \\cdot ${b} - ${c}`; W=[`${a} + ${b} - ${c}`,`${a} \\cdot (${b} - ${c})`,`${a} + ${b} \\cdot ${c}`]; }
+    else { C=`${c} + ${a} \\cdot ${b}`; W=[`(${c} + ${a}) \\cdot ${b}`,`${c} + ${a} + ${b}`,`${c} \\cdot ${a} + ${b}`]; if(c*a+b===c+a*b) return null; }
+    return mc(T[1],opt(C,M(C)),W.map(x=>opt(x,M(x))),{t:'expr',kind:T[0],a,b,c});
+  }
+};
+
+/* =====================================================================
+   2. RATIO AND PROPORTION
+   ===================================================================== */
+function coprime(max){let p,q;do{p=R(1,max);q=R(1,max);}while(p===q||gcd(p,q)!==1);return [p,q];}
+const rOpt=(a,b)=>{const g=gcd(a,b);return opt((a/g)+':'+(b/g),ratio(a/g,b/g));};
+const rRaw=(a,b)=>opt(a+':'+b+'raw',ratio(a,b));
+const RAT={
+  partPart(){
+    const C=fresh([['A class has','girls','boys'],['An animal shelter in Antofagasta has','dogs','cats'],['A parking lot has','red cars','white cars'],['A classroom library has','fiction books','non-fiction books'],['A school band has','students who play drums','students who play flute'],['Last month, a weather station recorded','sunny days','cloudy days'],['A fruit stand has','mangoes','papayas']],'pp');
+    const [p,q]=coprime(9),k=R(2,6),a=p*k,b=q*k;
+    const text=`${C[0]} ${a} ${C[1]} and ${b} ${C[2]}. What is the ratio of ${C[1]} to ${C[2]} in simplest form?`;
+    return mc(text,rOpt(a,b),[rOpt(b,a),rOpt(a,a+b),rRaw(a,b),rOpt(b,a+b)],{t:'pp',a,b});
+  },
+  partWhole(){
+    const C=fresh([['A basket contains','red apples','green apples','apples'],['A fish tank has','goldfish','guppies','fish'],['A choir has','sopranos','altos','singers'],['A bag contains','chocolate candies','mint candies','candies'],['A garden has','rose bushes','lily plants','plants'],['A playlist has','cumbia songs','pop songs','songs'],['A drawer has','white socks','black socks','socks']],'pw');
+    const [p,q]=coprime(8),k=R(2,5),a=p*k,b=q*k;
+    const text=`${C[0]} ${a} ${C[1]} and ${b} ${C[2]}. What is the ratio of ${C[1]} to all the ${C[3]} in simplest form?`;
+    return mc(text,rOpt(a,a+b),[rOpt(a,b),rOpt(b,a+b),rOpt(a+b,a),rRaw(a,a+b)],{t:'pw',a,b});
+  },
+  threeParts(){
+    const C=fresh([['A jar contains',['blue','yellow','green'],'marbles'],['A flower shop has',['red','white','pink'],'roses'],['A party has',['orange','purple','silver'],'balloons'],['A mosaic uses',['black','white','gold'],'tiles'],['A bracelet has',['glass','wooden','metal'],'beads'],['A closet has',['striped','plain','printed'],'T-shirts']],'tp');
+    const x=[R(2,12),R(2,12),R(2,12)], i=R(0,2), tot=x[0]+x[1]+x[2], part=x[i];
+    const text=`${C[0]} ${x[0]} ${C[1][0]}, ${x[1]} ${C[1][1]} and ${x[2]} ${C[1][2]} ${C[2]}. What is the ratio of ${C[1][i]} ${C[2]} to the total number of ${C[2]}?`;
+    const o=x[(i+1)%3];
+    return mc(text,rOpt(part,tot),[rOpt(part,tot-part),rOpt(tot,part),rOpt(part,o),rRaw(part,tot),rOpt(o,tot)],{t:'tp',x,i});
+  },
+  scale(){
+    const w=who();
+    const C=fresh([
+      [(p,q,x)=>`The ratio of teachers to students on a field trip is ${ratio(p,q)}. If ${x} teachers go on the trip, how many students go?`,'students',1],
+      [(p,q,x)=>`A pancake recipe uses flour and milk in the ratio ${ratio(p,q)}. If ${w.n} uses ${x} cups of flour, how many cups of milk does ${w.he} need?`,'cups',0],
+      [(p,q,x)=>`To paint a wall, blue and white paint are mixed in the ratio ${ratio(p,q)}. If the painter uses ${x} liters of blue paint, how many liters of white paint are needed?`,'liters',0],
+      [(p,q,x)=>`In a school garden, the ratio of tomato plants to lettuce plants is ${ratio(p,q)}. If there are ${x} tomato plants, how many lettuce plants are there?`,'plants',0],
+      [(p,q,x)=>`At a summer camp, the ratio of adults to children is ${ratio(p,q)}. If ${x} adults are at the camp, how many children are there?`,'children',1],
+      [(p,q,x)=>`A lemonade recipe uses lemons and spoons of sugar in the ratio ${ratio(p,q)}. How many spoons of sugar are needed for ${x} lemons?`,'spoons',0]
+    ],'sc');
+    let p,q; if(C[2]){p=1;q=R(4,12);}else [p,q]=coprime(7);
+    const k=R(2,9),x=p*k,A=q*k,u=` ${C[1]}`;
+    return mc(C[0](p,q,x),opt(A,fmt(A)+u),nums(A,[x+(q-p),A+q,A-q,x*q,A+p],v=>fmt(v)+u,1),{t:'sc',p,q,x});
+  },
+  mixture(){
+    const C=fresh([['A drink is mixed using juice and water','juice','water','cups','drink'],['A concrete mix uses sand and cement','sand','cement','buckets','mix'],['A fruit salad uses strawberries and bananas','strawberries','bananas','cups','fruit salad'],['A shade of green paint is made by mixing yellow and blue paint','yellow','blue','liters','paint'],['A trail mix uses peanuts and raisins','peanuts','raisins','cups','trail mix']],'mx');
+    const [p,q]=coprime(7),k=R(2,6),a=p*k,b=q*k,t=a+b,u=C[3];
+    const text=`${C[0]} in the ratio ${ratio(p,q)}. If you use ${a} ${u} of ${C[1]}, how many ${u} of ${C[2]} do you need? How many ${u} of ${C[4]} will you make in total?`;
+    const pair=(x,y)=>opt(x+'|'+y,`${fmt(x)} ${u} of ${C[2]}; ${fmt(y)} ${u} in total`);
+    const add=a+(q-p);
+    const W=[pair(add,a+add),pair(b,p+q),pair(t,t+a),pair(b,b+q),pair(b+p,t+p)].filter(o=>{const [x,y]=o.key.split('|').map(Number);return x>0&&y>0;});
+    return mc(text,pair(b,t),W,{t:'mx',p,q,a});
+  },
+  unitRate(){
+    const w=who();
+    const C=fresh([
+      [()=>R(6,12)*500,(T,a,b)=>`${w.n} earns ${money(T)} for ${a} hours of work at a café. At the same rate, how much does ${w.he} earn in ${b} hours?`,money],
+      [()=>R(8,18)*5,(T,a,b)=>`A bus travels ${T} km in ${a} hours. At the same speed, how far does it travel in ${b} hours?`,v=>fmt(v)+' km'],
+      [()=>R(8,25),(T,a,b)=>`${w.n} reads ${T} pages in ${a} days. At the same pace, how many pages will ${w.he} read in ${b} days?`,v=>fmt(v)+' pages'],
+      [()=>R(6,15),(T,a,b)=>`A faucet fills ${T} liters of water in ${a} minutes. How many liters does it fill in ${b} minutes?`,v=>fmt(v)+' liters'],
+      [()=>R(12,30),(T,a,b)=>`A printer prints ${T} pages in ${a} minutes. At the same speed, how many pages does it print in ${b} minutes?`,v=>fmt(v)+' pages'],
+      [()=>R(3,9)*100,(T,a,b)=>`A copper mine near Calama moves ${fmt(T)} tons of rock in ${a} hours. At the same rate, how many tons does it move in ${b} hours?`,v=>fmt(v)+' tons']
+    ],'ur');
+    const r=C[0](),a=R(2,5),b=R(6,15),T=r*a,A=r*b;
+    return mc(C[1](T,a,b),opt(A,C[2](A)),nums(A,[T*b,T+(b-a),r*(b-1),r*(b+1),r],C[2],r),{t:'ur',T,a,b});
+  },
+  unitPrice(){
+    const C=fresh([['notebooks',600,1500],['bus tickets',700,900],['movie tickets',3500,5500],['kilos of tomatoes',800,1600],['empanadas',1500,2500],['liters of milk',900,1300],['packs of stickers',500,1200],['kilos of bananas',900,1500]],'up');
+    const r=R(C[1]/50,C[2]/50)*50,a=R(2,6),b=R(7,12),T=r*a,A=r*b;
+    const text=`${cap(WORD[a])} ${C[0]} cost ${money(T)}. At the same price each, how much do ${b} ${C[0]} cost?`;
+    return mc(text,opt(A,money(A)),nums(A,[T*b,T+(b-a)*100,T+r,r*(b-1),r*(b+1)],money,50),{t:'up',T,a,b});
+  }
+};
+
+/* =====================================================================
+   3. DECIMALS  (valores enteros escalados ×10^6)
+   ===================================================================== */
+function randDec(min,max,dp){const s=10**dp;let v;do{v=R(Math.round(min*s),Math.round(max*s));}while(dp>0&&v%10===0);return v*(SC/s);}
+const dpOf=v=>{let d=0;while(d<6&&v%(SC/10**d)!==0)d++;return d;};
+const digitsOf=v=>v/(SC/10**dpOf(v));
+const DEC={
+  add(){
+    const w=who();
+    const C=fresh([
+      ['km',(x,y,z)=>`${w.n} walks ${x} km in the morning, ${y} km in the afternoon and ${z} km in the evening. How many kilometers does ${w.he} walk in total?`,0.3,4],
+      ['kg',(x,y,z)=>`At the feria, ${w.n} buys ${x} kg of tomatoes, ${y} kg of potatoes and ${z} kg of apples. How many kilograms does ${w.he} carry in total?`,0.3,3],
+      ['L',(x,y,z)=>`Three bottles hold ${x} L, ${y} L and ${z} L of water. How many liters do they hold altogether?`,0.2,3],
+      ['m',(x,y,z)=>`A carpenter cuts three boards measuring ${x} m, ${y} m and ${z} m. What is their total length?`,0.4,3],
+      ['km',(x,y,z)=>`A cyclist rides ${x} km on Monday, ${y} km on Wednesday and ${z} km on Friday along the Antofagasta coast. How far does ${w.he} ride in total?`,1,9],
+      ['s',(x,y,z)=>`In a relay race, three runners take ${x} s, ${y} s and ${z} s. What is the team's total time?`,9,15]
+    ],'da');
+    const dps=shuffle([1,2,3]); const v=dps.map(d=>randDec(C[2],C[3],d)); const S=v[0]+v[1]+v[2];
+    const md=3; const mis=v.reduce((s,x)=>s+digitsOf(x)*(SC/10**md),0);
+    const f=x=>dstr(x)+' '+C[0];
+    return mc(C[1](...v.map(dstr)),opt(S,f(S)),[mis,S+SC,S-SC/10,S+SC/10,S+SC/100].filter(x=>x>0&&x!==S).map(x=>opt(x,f(x))),{t:'da',v});
+  },
+  sub(){
+    const w=who();
+    const C=fresh([
+      ['m',(a,b)=>`A ribbon is ${a} m long. ${w.n} cuts off ${b} m. How much ribbon is left?`],
+      ['L',(a,b)=>`A water tank has ${a} L. ${w.n} uses ${b} L to water the plants. How many liters are left?`],
+      ['kg',(a,b)=>`A backpack with a book inside weighs ${a} kg. Without the book it weighs ${b} kg. How much does the book weigh?`],
+      ['m',(a,b)=>`In the long jump, ${w.n} jumps ${a} m and ${w.his} friend jumps ${b} m. How much farther does ${w.n} jump?`],
+      ['km',(a,b)=>`A hiking trail is ${a} km long. After lunch, the group has already walked ${b} km. How many kilometers are left?`],
+      ['kg',(a,b)=>`A box of fruit weighs ${a} kg. After ${w.n} takes out some oranges, it weighs ${b} kg. How many kilograms of oranges did ${w.he} take out?`]
+    ],'ds');
+    let a,b,d1,d2,df;do{[d1,d2]=shuffle([1,2,3]).slice(0,2);a=randDec(3,9,d1);df=randDec(0.2,2.5,d2);b=a-df;}while(b<=SC/2);
+    const A=a-b,md=Math.max(d1,d2),mis=(digitsOf(a)-digitsOf(b))*(SC/10**md);
+    const f=x=>dstr(x)+' '+C[0];
+    return mc(C[1](dstr(a),dstr(b)),opt(A,f(A)),[mis,a+b,A+SC/10,A-SC/10,A+SC,A-SC/100].filter(x=>x>0&&x!==A).map(x=>opt(x,f(x))),{t:'ds',a,b});
+  },
+  mulPow(){
+    const fac=pick([10,100,1000]),dp=R(1,3),v=randDec(0.01,9.9,dp),A=v*fac;
+    const C=fresh([
+      [null,'',()=>`Calculate ${M(dtex(v)+' \\cdot '+tnum(fac))}`],
+      ['m','m',()=>`One ribbon is ${dstr(v)} m long. How long are ${fmt(fac)} ribbons of the same length altogether?`],
+      ['kg','kg',()=>`One bag contains ${dstr(v)} kg of rice. How many kilograms are in ${fmt(fac)} identical bags?`],
+      ['L','L',()=>`One bottle holds ${dstr(v)} L of water. How many liters do ${fmt(fac)} identical bottles hold?`],
+      [null,'',()=>`Calculate ${M(tnum(fac)+' \\cdot '+dtex(v))}`]
+    ],'mp');
+    const u=C[1]?' '+C[1]:'', f=x=>dstr(x)+u;
+    const zeros=dstr(v)+String(fac).slice(1);
+    return mc(C[2](),opt(A,f(A)),[opt(A/10,f(A/10)),opt(A*10,f(A*10)),opt('z'+zeros,zeros+u),opt(v*fac/100,f(v*fac/100))],{t:'mp',v,fac});
+  },
+  divPow(){
+    const fac=pick([10,100,1000]),dp=R(0,2),v=randDec(0.1,dp?60:900,dp);
+    if(dp===0&&(v/SC)%fac===0) return null;
+    const A=v/fac; if(!Number.isInteger(A)) return null;
+    const C=fresh([
+      ['',()=>`Calculate ${M(dtex(v)+' : '+tnum(fac))}`],
+      ['kg',()=>`A total of ${dstr(v)} kg of flour is shared equally among ${fmt(fac)} bags. How much flour goes in each bag?`],
+      ['m',()=>`A roll of ${dstr(v)} m of wire is cut into ${fmt(fac)} equal pieces. How long is each piece?`],
+      ['L',()=>`A total of ${dstr(v)} L of water is poured equally into ${fmt(fac)} containers. How much water goes in each container?`],
+      ['',()=>`Calculate ${M(dtex(v)+' : '+tnum(fac))}`]
+    ],'dp');
+    const u=C[0]?' '+C[0]:'', f=x=>dstr(x)+u;
+    const W=[v*fac,A*10,A/10,A*100].filter(x=>Number.isInteger(x)&&x>0);
+    return mc(C[1](),opt(A,f(A)),W.map(x=>opt(x,f(x))),{t:'dp',v,fac});
+  },
+  divWhole(){
+    const d=R(2,9),qd=R(1,2),q=randDec(qd===1?0.2:0.11,qd===1?1.5:0.95,qd),v=q*d;
+    const C=fresh([
+      ['',()=>`Calculate ${M(dtex(v)+' : '+d)}`],
+      ['L',()=>`A ${dstr(v)} L bottle of juice is poured equally into ${d} glasses. How much juice goes into each glass?`],
+      ['m',()=>`A ${dstr(v)} m rope is cut into ${d} equal pieces. How long is each piece?`],
+      ['kg',()=>`A ${dstr(v)} kg bag of rice is shared equally among ${d} families. How much rice does each family get?`],
+      ['km',()=>`A ${dstr(v)} km relay course is split equally among ${d} runners. How far does each runner go?`]
+    ],'dw');
+    const u=C[0]?' '+C[0]:'', f=x=>dstr(x)+u;
+    const W=[q*10,q/10,q+SC/100,q+SC/10,q-SC/100].filter(x=>Number.isInteger(x)&&x>0);
+    return mc(C[1](),opt(q,f(q)),W.map(x=>opt(x,f(x))),{t:'dw',v,d});
+  }
+};
+
+/* =====================================================================
+   4. FRACTIONS
+   ===================================================================== */
+const eqv=(a,b,c,d)=>a*d===b*c;
+const FRA={
+  toImproper(){
+    const w=who(),x=R(1,5),d=R(2,9),n=R(1,d-1); if(gcd(n,d)!==1) return null;
+    const m=M(mixed(x,n,d));
+    const C=fresh([
+      `Convert ${m} to an improper fraction.`,
+      `A recipe needs ${m} cups of flour. Write this amount as an improper fraction.`,
+      `${w.n} runs ${m} km every Saturday. Write this distance as an improper fraction.`,
+      `A ribbon is ${m} m long. Write its length as an improper fraction.`,
+      `A plank of wood is ${m} m long. Write its length as an improper fraction.`
+    ],'ti');
+    const N=x*d+n;
+    const raw=(a,b)=>eqv(a,b,N,d)?null:opt(a+'/'+b,M(frac(a,b)));
+    return mc(C,opt(N+'/'+d,M(frac(N,d))),[raw(x+n,d),raw(x*n+d,d),raw(x*d-n,d),raw(N,x*d),raw(x*n,d)],{t:'ti',x,n,d});
+  },
+  toMixed(){
+    const w=who(),d=R(2,9),x=R(1,6),r=R(1,d-1); if(gcd(r,d)!==1) return null;
+    const N=x*d+r,f=M(frac(N,d));
+    const C=fresh([
+      `Convert ${f} to a mixed number.`,
+      `A bakery uses ${f} cups of flour for several loaves of bread. Write this amount as a mixed number.`,
+      `At a party, ${f} pizzas were shared. Write this amount as a mixed number.`,
+      `${w.n} practices piano for ${f} hours in a week. Write this time as a mixed number.`,
+      `A garden bed is ${f} m wide. Write this width as a mixed number.`
+    ],'tm');
+    const mx=(a,b,c)=>opt(a+' '+b+'/'+c,M(mixed(a,b,c)));
+    const W=[x>1?mx(x-1,r+d,d):null,r>1?mx(x,d,r):null,mx(x+1,r,d),mx(r,x,d),r>1?mx(x,r-1,d):mx(x,r+1,d)];
+    return mc(C,mx(x,r,d),W,{t:'tm',N,d});
+  },
+  add(){
+    const w=who(); const Ds=[2,3,4,5,6,8,10,12];
+    let d1,d2,n1,n2; do{d1=pick(Ds);d2=pick(Ds);n1=R(1,d1-1);n2=R(1,d2-1);}while(d1===d2||gcd(n1,d1)!==1||gcd(n2,d2)!==1||n1*d2+n2*d1>=d1*d2);
+    const a=M(frac(n1,d1)),b=M(frac(n2,d2));
+    const C=fresh([
+      ['cup',`${w.n} uses ${a} cup of milk for one recipe and ${b} cup for another. How much milk does ${w.he} use altogether?`],
+      ['hour',`${w.n} reads for ${a} hour before lunch and ${b} hour after dinner. How long does ${w.he} read in total?`],
+      ['km',`${w.n} walks ${a} km to the bakery and then ${b} km to school. How far does ${w.he} walk in all?`],
+      ['L',`A painter uses ${a} L of paint on a door and ${b} L on a window. How much paint does the painter use altogether?`],
+      ['kg',`At the feria, ${w.n} buys ${a} kg of grapes and ${b} kg of cherries. How many kilograms of fruit does ${w.he} buy?`],
+      ['of the pizza',`${w.n} eats ${a} of a pizza and ${w.his} brother eats ${b} of the same pizza. What fraction of the pizza do they eat together?`]
+    ],'fa');
+    const u=C[0].startsWith('of')?'':' '+C[0];
+    const N=n1*d2+n2*d1,Dd=d1*d2;
+    const W=[frOpt(n1+n2,d1+d2,u),frOpt(n1*n2,Dd,u),frOpt(n1+n2,Math.max(d1,d2),u),frOpt(N+1,Dd,u),frOpt(N,Dd*2,u)];
+    return mc(C[1],frOpt(N,Dd,u),W,{t:'fa',n1,d1,n2,d2});
+  },
+  sub(){
+    const w=who(); const Ds=[2,3,4,5,6,8,10,12];
+    let d1,d2,n1,n2; do{d1=pick(Ds);d2=pick(Ds);n1=R(1,d1-1);n2=R(1,d2-1);}while(d1===d2||gcd(n1,d1)!==1||gcd(n2,d2)!==1||n1*d2<=n2*d1);
+    const a=M(frac(n1,d1)),b=M(frac(n2,d2));
+    const C=fresh([
+      ['m',`A ribbon is ${a} m long. ${w.n} cuts off ${b} m. How much ribbon remains?`],
+      ['L',`A bottle has ${a} L of water. ${w.n} drinks ${b} L. How much water is left in the bottle?`],
+      ['hour',`${w.n} has ${a} hour to finish ${w.his} homework. ${w.He} has already worked ${b} hour. How much time is left?`],
+      ['of the cake',`${a} of a cake is left after a birthday party. ${w.n} takes ${b} of the cake home. What fraction of the cake remains?`],
+      ['km',`A trail is ${a} km long. A group has walked ${b} km. How much farther do they have to walk?`],
+      ['kg',`A bag has ${a} kg of flour. A baker uses ${b} kg for bread. How much flour is left?`]
+    ],'fs');
+    const u=C[0].startsWith('of')?'':' '+C[0];
+    const N=n1*d2-n2*d1,Dd=d1*d2;
+    const W=[n1>n2?frOpt(n1-n2,Math.abs(d1-d2)||d1,u):null,frOpt(n1*d2+n2*d1,Dd,u),n1>n2?frOpt(n1-n2,Math.max(d1,d2),u):null,frOpt(N+1,Dd,u),frOpt(N,Dd*2,u)];
+    return mc(C[1],frOpt(N,Dd,u),W,{t:'fs',n1,d1,n2,d2});
+  },
+  toDecimal(){
+    const d=pick([2,4,5,10,20,25]),n=R(1,d-1); if(gcd(n,d)!==1) return null;
+    const C=fresh([['liter','liter','liters'],['kilogram of cheese','kg','kg'],['kilometer','km','km'],['meter of fabric','m','m'],['hour','hour','hours'],['liter of paint','liter','liters']],'fd');
+    const v=n*SC/d, un=x=>' '+(x>=2*SC?C[2]:C[1]);
+    const text=`${M(frac(n,d))} ${C[0]} is the same as:`;
+    const cand=[[`0,${n}${d}`,Number(`0.${n}${d}`)],[`${n},${d}`,Number(`${n}.${d}`)],[dstr(v+SC/5),(v+SC/5)/SC],[dstr(v+SC/10),(v+SC/10)/SC],[dstr(Math.abs(v-SC/10)),Math.abs(v-SC/10)/SC]];
+    const W=cand.filter(([s])=>s!==dstr(v)&&s!=='0').map(([s,x])=>opt('s'+s,s+un(Math.round(x*SC))));
+    return mc(text,opt('s'+dstr(v),dstr(v)+un(v)),W,{t:'fd',n,d});
+  }
+};
+
+/* =====================================================================
+   5. PERCENT
+   ===================================================================== */
+function shadedSet(n,k){return shuffle([...Array(n).keys()]).slice(0,k).sort((a,b)=>a-b);}
+const PCT={
+  diagram(){
+    const w=who();
+    const C=fresh([
+      ['circle',[4,5,8,10,20],(n)=>`A circle is divided into ${n} equal parts. What percent of the circle is shaded?`],
+      ['circle',[4,5,8,10],(n)=>`A pizza is cut into ${n} equal slices. The shaded slices have already been eaten. What percent of the pizza was eaten?`],
+      ['strip',[4,5,10,20],(n)=>`A strip is divided into ${n} equal parts. What percent of the strip is shaded?`],
+      ['strip',[5,10,20],(n)=>`A chocolate bar has ${n} equal pieces. ${w.n} ate the shaded pieces. What percent of the bar did ${w.he} eat?`],
+      ['grid',[100],(n)=>`A patio floor has ${n} equal tiles, and the shaded tiles are blue. What percent of the floor is blue?`],
+      ['grid',[20,25,10],(n)=>`A school garden is divided into ${n} equal plots. Tomatoes are planted in the shaded plots. What percent of the garden has tomatoes?`],
+      ['grid',[20,25],(n)=>`A wall mural has ${n} equal squares. The shaded squares are painted gold. What percent of the mural is gold?`]
+    ],'pd');
+    const n=pick(C[1]); let k; do { k=n===100?R(8,92):R(1,n-1); } while(!Number.isInteger(100*k/n));
+    const A=100*k/n;
+    let fig;
+    if(C[0]==='circle') fig={type:'circle',n,s:[...Array(k).keys()]};
+    else if(C[0]==='strip') fig={type:'strip',n,s:shadedSet(n,k)};
+    else { const [r,c]=n===100?[10,10]:n===25?[5,5]:n===20?[4,5]:[2,5]; fig={type:'grid',r,c,s:shadedSet(n,k)}; }
+    const W=[k,100-A,A+10,A-10,A/10,A+5].filter(v=>Number.isInteger(v)&&v>0&&v<100&&v!==A);
+    return mc(C[2](n),opt(A,pct(A)),[...new Set(W)].map(v=>opt(v,pct(v))),{t:'pd',n,k},fig);
+  },
+  score(){
+    const w=who();
+    const C=fresh([
+      (s,t)=>`You scored ${s} out of ${t} on a test. What percent did you score?`,
+      (s,t)=>`In basketball practice, ${w.n} makes ${s} of ${t} free throws. What percent of the free throws does ${w.he} make?`,
+      (s,t)=>`${w.n} planted ${t} seeds in the school garden and ${s} of them sprouted. What percent of the seeds sprouted?`,
+      (s,t)=>`In a survey of ${t} students, ${s} said they walk to school. What percent of the students walk to school?`,
+      (s,t)=>`A goalkeeper faced ${t} penalty kicks and saved ${s}. What percent of the penalty kicks did the goalkeeper save?`,
+      (s,t)=>`${w.n} answered ${s} of the ${t} questions of a math challenge correctly. What percent did ${w.he} answer correctly?`
+    ],'ps');
+    const t=pick([10,20,25,40,50,200,4,5]); let s; do{s=R(1,t-1);}while((100*s)%t!==0);
+    const A=100*s/t;
+    const W=[s,100-A,A-10,A+5,A+10,t-s].filter(v=>v>0&&v<100&&v!==A);
+    return mc(C(s,t),opt(A,pct(A)),[...new Set(W)].map(v=>opt(v,pct(v))),{t:'ps',s,tt:t});
+  },
+  ofNumber(){
+    const p=pick([5,10,15,20,25,30,40,50,60,75]),st=100/gcd(p,100),b=st*R(Math.ceil(20/st),Math.floor(600/st)),A=p*b/100;
+    const text=pick([`What is ${pct(p)} of ${fmt(b)}?`,`Calculate ${pct(p)} of ${fmt(b)}.`,`Find ${pct(p)} of ${fmt(b)}.`]);
+    return mc(text,opt(A,fmt(A)),nums(A,[b-A,A*2,p*b/10,A+p,b/p],fmt,5),{t:'po',p,b});
+  },
+  context(){
+    const C=fresh([
+      [[120,480],[10,20,25,30,40],(p,b)=>`A group of ${fmt(b)} students was asked about their favorite sport. ${pct(p)} chose football. How many students chose football?`,' students'],
+      [[8000,40000],[10,20,25,30,40,50],(p,b)=>`A jacket costs ${money(b)} and has a ${pct(p)} discount. How much money is the discount?`,'$'],
+      [[200,800],[10,20,25,40,60],(p,b)=>`A school has ${fmt(b)} students, and ${pct(p)} of them take the bus. How many students take the bus?`,' students'],
+      [[8000,20000],[25,50,75,80,90],(p,b)=>`A stadium in Antofagasta has ${fmt(b)} seats and is ${pct(p)} full. How many seats are occupied?`,' seats'],
+      [[60,90],[10,20,30,40],(p,b)=>`A class lasts ${b} minutes and ${pct(p)} of the time is used for a warm-up. How many minutes is the warm-up?`,' minutes'],
+      [[400,1200],[15,25,35,45,65],(p,b)=>`A water tank holds ${fmt(b)} liters and is ${pct(p)} full. How many liters of water are in the tank?`,' liters'],
+      [[150,600],[10,20,30,60],(p,b)=>`A book has ${fmt(b)} pages. ${pick(['Sofía','Diego','Camila','Tomás'])} has read ${pct(p)} of it. How many pages has that been?`,' pages']
+    ],'pc');
+    const p=pick(C[1]),st=100/gcd(p,100),lo=Math.ceil(C[0][0]/st),hi=Math.floor(C[0][1]/st);
+    let b=st*R(lo,hi); if(C[3]==='$'||b>=5000) b=Math.round(b/(st*100))*st*100||st*100;
+    const A=p*b/100; if(!Number.isInteger(A)) return null;
+    const f=C[3]==='$'?money:v=>fmt(v)+C[3];
+    return mc(C[2](p,b),opt(A,f(A)),nums(A,[b-A,A*2,p*b/10,Math.round(A/2)],f,C[3]==='$'?500:5),{t:'pc',p,b});
+  },
+  decToPct(){
+    const val=pick([[0.4,'0,4'],[0.35,'0,35'],[0.05,'0,05'],[0.8,'0,8'],[0.75,'0,75'],[1.2,'1,2'],[0.06,'0,06'],[0.45,'0,45'],[0.9,'0,9'],[0.65,'0,65'],[0.15,'0,15'],[1.5,'1,5']]);
+    const A=Math.round(val[0]*100); // all generated percentage answers are whole numbers
+    const C=fresh([
+      s=>`Write ${s} as a percent.`,
+      s=>`In a class, ${s} of the students play an instrument. What percent of the students is that?`,
+      s=>`A phone battery is at ${s} of its full charge. What percent is that?`,
+      s=>`${s} of the water in a reservoir comes from rain. What percent is that?`,
+      s=>`Express the decimal ${s} as a percent.`
+    ],'dt');
+    const W=[A/10,A*10,A+10,A-10,100-A,A+5,A+20].filter(x=>Number.isInteger(x)&&x>=0&&x<=200&&x!==A);
+    return mc(C(val[1]),opt(A,pct(A)),[...new Set(W)].map(x=>opt(x,pct(x))),{t:'dt',x:val[0]});
+  }
+};
+
+/* =====================================================================
+   6. ALGEBRA
+   ===================================================================== */
+const ALG={
+  equation(){
+    const a=R(2,9),b=R(1,18),x=R(2,15),subtract=pick([true,false]);
+    if(subtract&&a*x<=b) return null;
+    const c=a*x+(subtract?-b:b);
+    const equation=`${a}x ${subtract?'-':'+'} ${b} = ${c}`;
+    return mc(`Solve ${M(equation)}. What is ${M('x')}?`,opt(x,fmt(x)),
+      nums(x,[c-b,c+b,Math.abs(c/a),x+a,x+b,x+1],fmt,1,v=>Number.isInteger(v)&&v>0),
+      {t:'algEquation',a,b,c,x,subtract});
+  },
+  inequality(){
+    const a=R(1,8),threshold=R(4,16),b=a+threshold,less=pick([true,false]);
+    const correct=less?R(1,threshold-1):threshold+R(1,6);
+    const wrong=less?[threshold,threshold+1,threshold+2,threshold+3]:[threshold,threshold-1,threshold-2,1];
+    return mc(`Which positive value of ${M('x')} satisfies ${M('x + '+a+' '+(less?'<':'>')+' '+b)}?`,
+      opt(correct,fmt(correct)),wrong.filter(v=>v>0).map(v=>opt(v,fmt(v))),
+      {t:'algInequality',a,b,less});
+  },
+  translate(){
+    const n=R(2,12),kind=R(0,5);
+    const rows=[
+      [`Twice a number ${M('n')}`,`2n`,['n+2','n/2','2+n','n-2']],
+      [`Three times a number ${M('n')}`,`3n`,['n+3','n/3','3+n','n-3']],
+      [`Half of a number ${M('n')}`,`n/2`,['2n','n-2','2/n','n+2']],
+      [`${n} more than twice a number ${M('x')}`,`2x+${n}`,[`2(x+${n})`,`x+${n}`,`2x-${n}`,`${n}x+2`]],
+      [`${n} less than three times a number ${M('x')}`,`3x-${n}`,[`3(x-${n})`,`x-${n}`,`${n}-3x`,`3x+${n}`]],
+      [`Half of a number ${M('x')}, then add ${n}`,`x/2+${n}`,[`x/(2+${n})`,`2x+${n}`,`(x+${n})/2`,`x/2-${n}`]]
+    ];
+    const [phrase,right,wrong]=rows[kind];
+    return mc(`Which expression represents: ${phrase}?`,opt(right,M(right)),wrong.map(v=>opt(v,M(v))),{t:'algTranslate',kind,n});
+  },
+  coordinates(){
+    const x=R(1,8),y=R(1,8),right=`(${x}, ${y})`;
+    const candidates=[`(${y}, ${x})`,`(${x+1}, ${y})`,`(${x}, ${y+1})`,`(${y+1}, ${x})`,`(${x-1}, ${y})`,`(${x}, ${y-1})`,`(${x+2}, ${y})`];
+    const wrong=[...new Set(candidates)].filter(v=>v!==right&&!/\(0,|, 0\)/.test(v)).slice(0,5).map(v=>opt(v,v));
+    return mc('What are the coordinates of point P?',opt(right,right),wrong,{t:'algCoordinates',x,y},{type:'coordinatePoint',x,y});
+  },
+  sequence(){
+    const start=R(1,20),step=R(2,12),position=R(2,4),terms=Array.from({length:5},(_,i)=>start+i*step),answer=terms[position];
+    const shown=terms.map((v,i)=>i===position?'□':fmt(v)).join(', ');
+    return mc(`Find the missing number: ${shown}.`,opt(answer,fmt(answer)),
+      nums(answer,[answer-step,answer+step,answer+1,step*position,start+step],fmt,1,v=>v>0),
+      {t:'algSequence',start,step,position});
+  },
+  balance(){
+    const a=R(2,3),b=R(1,4),x=R(2,5),c=a*x+b;
+    return mc('The scale is balanced. Each blue block weighs x units and each small gold block weighs 1 unit. What is x?',
+      opt(x,fmt(x)),nums(x,[c-b,c/a,b,a+x,x+1],fmt,1,v=>v>0),
+      {t:'algBalance',a,b,c,x},{type:'balanceScale',a,b,c});
+  }
+};
+
+/* =====================================================================
+   7. TRANSFORMATIONS
+   ===================================================================== */
+const pt=(x,y)=>`(${x}, ${y})`;
+const vtex=(x,y)=>M(`\\vec{v}=\\langle ${x},${y}\\rangle`);
+const move=(p,dx,dy)=>[p[0]+dx,p[1]+dy];
+const reflect=(p,axis,k=0)=>axis==='x'?[p[0],-p[1]]:axis==='y'?[-p[0],p[1]]:axis==='vertical'?[2*k-p[0],p[1]]:axis==='horizontal'?[p[0],2*k-p[1]]:[p[1],p[0]];
+const rotate=(p,deg)=>deg===90?[-p[1],p[0]]:deg===180?[-p[0],-p[1]]:[p[1],-p[0]];
+const planeFig=(originals,images=[],extras={})=>({type:'transformPlane',originals,images,...extras});
+const coordMC=(text,target,wrong,meta,fig)=>mc(text,opt(pt(...target),pt(...target)),wrong.map(p=>opt(pt(...p),pt(...p))),meta,fig);
+const vecMC=(text,v,wrong,meta,fig)=>mc(text,opt(v.join(','),vtex(...v)),wrong.map(p=>opt(p.join(','),vtex(...p))),meta,fig);
+function vectorChoices(dx,dy){return [[-dx,-dy],[dy,dx],[-dy,dx],[dx,-dy],[-dx,dy],[dx+1,dy],[dx,dy+1]];}
+function coordChoices([x,y]){return [[y,x],[-x,y],[x,-y],[-x,-y],[x+1,y],[x,y+1],[x-1,y],[x,y-1]];}
+function nonzeroVector(){let x,y;do{x=R(-4,4);y=R(-4,4);}while(x===0&&y===0);return [x,y];}
+function pointForVector(dx,dy){return [R(Math.max(-6,-8-dx),Math.min(6,8-dx)),R(Math.max(-6,-8-dy),Math.min(6,8-dy))];}
+function triangle(){const x=R(-3,2),y=R(-3,2);return [[x,y],[x+3,y],[x+1,y+2]];}
+const TRANS={
+  vectorFromFigure(){
+    const [dx,dy]=nonzeroVector(),A=pointForVector(dx,dy),Ap=move(A,dx,dy);
+    return vecMC('Point A is translated to A′. What is the translation vector?', [dx,dy],vectorChoices(dx,dy),{t:'tvf',dx,dy},planeFig([A],[Ap],{guide:'translation'}));
+  },
+  vectorFromCoordinates(){
+    const [dx,dy]=nonzeroVector(),A=pointForVector(dx,dy),Ap=move(A,dx,dy);
+    return vecMC(`A${pt(...A)} is translated to A′${pt(...Ap)}. Find the translation vector.`,[dx,dy],vectorChoices(dx,dy),{t:'tvc',dx,dy});
+  },
+  vectorFromPolygon(){
+    const P=triangle(),[dx,dy]=nonzeroVector(),Q=P.map(p=>move(p,dx,dy));if(Q.some(p=>p.some(z=>Math.abs(z)>8)))return null;
+    return vecMC('Triangle ABC is translated to A′B′C′. What is the translation vector?', [dx,dy],vectorChoices(dx,dy),{t:'tvp',dx,dy},planeFig(P,Q,{guide:'translation'}));
+  },
+  findImage(){
+    const [dx,dy]=nonzeroVector(),A=pointForVector(dx,dy),Ap=move(A,dx,dy),fig=pick([true,false]);
+    return coordMC(`A${pt(...A)} is translated by ${vtex(dx,dy)}. What are the coordinates of A′?`,Ap,coordChoices(Ap).concat([A,move(A,-dx,-dy)]),{t:'tfi',A,dx,dy},fig?planeFig([A],[],{vector:[dx,dy]}):null);
+  },
+  findOriginal(){
+    const [dx,dy]=nonzeroVector(),A=pointForVector(dx,dy),Ap=move(A,dx,dy);
+    return coordMC(`A′${pt(...Ap)} is the image of A under ${vtex(dx,dy)}. What are the coordinates of A?`,A,coordChoices(A).concat([Ap,move(Ap,dx,dy)]),{t:'tfo',A,Ap,dx,dy});
+  },
+  polygonVertex(){
+    const P=triangle(),[dx,dy]=nonzeroVector(),Q=P.map(p=>move(p,dx,dy));if(Q.some(p=>p.some(z=>Math.abs(z)>8)))return null;
+    const i=R(0,2),label='ABC'[i],target=Q[i];
+    return coordMC(`Triangle ABC is translated by ${vtex(dx,dy)}. What are the coordinates of ${label}′?`,target,coordChoices(target).concat([P[i],Q[(i+1)%3]]),{t:'tpv',P,Q,i,dx,dy},planeFig(P,[],{vector:[dx,dy]}));
+  },
+  composeVectors(){
+    const u=nonzeroVector(),v=nonzeroVector(),sum=[u[0]+v[0],u[1]+v[1]];
+    return vecMC(`A figure is translated by ${M(`\\vec{u}=\\langle ${u[0]},${u[1]}\\rangle`)} and then by ${vtex(...v)}. What single translation vector has the same effect?`,sum,vectorChoices(...sum).concat([u,v,[u[0]-v[0],u[1]-v[1]]]),{t:'tcompose',u,v});
+  },
+  missingComponent(){
+    const [dx,dy]=nonzeroVector(),A=pointForVector(dx,dy),Ap=move(A,dx,dy),askX=pick([true,false]);
+    const target=askX?dx:dy;
+    return mc(`A${pt(...A)} is translated to A′${pt(...Ap)} by ${askX?M(`\\vec{v}=\\langle k,${dy}\\rangle`):M(`\\vec{v}=\\langle ${dx},k\\rangle`)}. Find k.`,opt(target,fmt(target)),nums(target,[askX?Ap[0]:Ap[1],-target,askX?A[0]:A[1],target+1],fmt,1,()=>true),{t:'tmc',dx,dy,askX});
+  },
+  reflectionX(){return reflectionQuestion('x');},
+  reflectionY(){return reflectionQuestion('y');},
+  reflectionVertical(){return reflectionQuestion('vertical');},
+  reflectionHorizontal(){return reflectionQuestion('horizontal');},
+  reflectionDiagonal(){return reflectionQuestion('diagonal');},
+  reflectionFromFigure(){
+    const axis=pick(['x','y','vertical','horizontal','diagonal']),k=pick([-2,-1,1,2]);
+    const A=pointForReflection(axis,k),Ap=reflect(A,axis,k),line=axisLabel(axis,k);
+    const other=['x','y','vertical','horizontal','diagonal'].filter(z=>z!==axis&&reflect(A,z,k).some((n,i)=>n!==Ap[i])).map(z=>axisLabel(z,k));
+    return mc('Which line of reflection maps A to A′?',opt(line,line),other.map(x=>opt(x,x)),{t:'rline',axis,k,A,Ap},planeFig([A],[Ap],{guide:'reflection',axis,k}));
+  },
+  rotation90(){return rotationQuestion(90);},
+  rotation180(){return rotationQuestion(180);},
+  rotation270(){return rotationQuestion(270);},
+  rotationPolygon(){
+    const deg=pick([90,180,270]),P=triangle(),Q=P.map(p=>rotate(p,deg)),i=R(0,2),target=Q[i];
+    return coordMC(`Triangle ABC is rotated ${deg}° counterclockwise about O(0, 0). What are the coordinates of ${'ABC'[i]}′?`,target,
+      coordChoices(target).concat([P[i],rotate(P[i],(deg+90)%360||360)]),{t:'rotPoly',deg,P,Q,i},planeFig(P,[],{guide:'rotation'}));
+  },
+  rotationFromFigure(){
+    let A;do{A=[R(-5,5),R(-5,5)];}while(!A[0]||!A[1]);
+    const deg=pick([90,180,270]),Ap=rotate(A,deg);
+    return mc('What counterclockwise rotation about O(0, 0) maps A to A′?',opt(deg,`${deg}°`),[90,180,270,360].filter(v=>v!==deg).map(v=>opt(v,`${v}°`)),{t:'rotAngle',deg,A,Ap},planeFig([A],[Ap],{guide:'rotation'}));
+  },
+  rotationFindOriginal(){
+    let A;do{A=[R(-5,5),R(-5,5)];}while(!A[0]||!A[1]);
+    const deg=pick([90,180,270]),Ap=rotate(A,deg);
+    return coordMC(`A is rotated ${deg}° counterclockwise about O(0, 0), producing A′${pt(...Ap)}. What were the coordinates of A?`,A,coordChoices(A).concat([Ap,rotate(Ap,deg)]),{t:'rotOriginal',deg,A,Ap},planeFig([], [Ap],{guide:'rotation'}));
+  }
+};
+function axisLabel(axis,k){return axis==='x'?'x-axis':axis==='y'?'y-axis':axis==='vertical'?`x = ${k}`:axis==='horizontal'?`y = ${k}`:'y = x';}
+function pointForReflection(axis,k){
+  let A,Ap;do{A=[R(-5,5),R(-5,5)];Ap=reflect(A,axis,k);}while(A[0]===Ap[0]&&A[1]===Ap[1] || Ap.some(z=>Math.abs(z)>8));return A;
+}
+function reflectionQuestion(axis){
+  const k=axis==='vertical'||axis==='horizontal'?R(-2,2):0,A=pointForReflection(axis,k),Ap=reflect(A,axis,k),line=axisLabel(axis,k),fig=pick([true,false]);
+  return coordMC(`A${pt(...A)} is reflected across ${line}. What are the coordinates of A′?`,Ap,
+    coordChoices(Ap).concat([A,reflect(A,axis,-k)]),{t:'reflect',axis,k,A,Ap},fig?planeFig([A],[],{guide:'reflection',axis,k}):null);
+}
+function rotationQuestion(deg){
+  let A;do{A=[R(-6,6),R(-6,6)];}while(!A[0]||!A[1]);const Ap=rotate(A,deg);
+  return coordMC(`A${pt(...A)} is rotated ${deg}° counterclockwise about O(0, 0). What are the coordinates of A′?`,Ap,
+    coordChoices(Ap).concat([A,rotate(A,(deg+90)%360||360)]),{t:'rotate',deg,A,Ap},planeFig([A],[],{guide:'rotation'}));
+}
+
+/* =====================================================================
+   8. ANGLES
+   ===================================================================== */
+const degOpt=v=>opt(v,`${v}°`);
+const angleMC=(text,answer,wrong,meta,fig)=>mc(text,degOpt(answer),[...new Set(wrong)].filter(v=>Number.isInteger(v)&&v>0&&v<180&&v!==answer).map(degOpt),meta,fig);
+const angleWrong=(answer,other=[])=>[...other,180-answer,360-answer,answer+10,answer-10,answer+20,answer-20,2*answer,90-answer,90+answer].filter(v=>Number.isInteger(v)&&v>0&&v<180);
+const ANG={
+  triangle(){
+    const a=R(40,75),b=R(40,75),c=180-a-b,missing=R(0,2),values=[a,b,c],answer=values[missing];
+    const text=`In triangle ABC, two angles measure ${values[(missing+1)%3]}° and ${values[(missing+2)%3]}°. Find angle x.`;
+    return angleMC(text,answer,angleWrong(answer,[a+b,180-a,180-b]),{t:'angleTriangle',values,missing},
+      {type:'angleTriangle',values,missing});
+  },
+  quadrilateral(){
+    const a=R(68,110),b=R(70,118),c=R(65,112),d=360-a-b-c;
+    if(d<45||d>155)return null;
+    const values=[a,b,c,d],missing=R(0,3),answer=values[missing];
+    return angleMC('In quadrilateral ABCD, find angle x.',answer,angleWrong(answer,[180-answer,360-values[(missing+1)%4]-values[(missing+2)%4]]),
+      {t:'angleQuad',values,missing},{type:'angleQuad',values,missing});
+  },
+  vertical(){
+    const angle=R(40,140);
+    return angleMC('Two lines intersect. Find angle x opposite the given angle.',angle,angleWrong(angle,[180-angle,90,2*angle]),
+      {t:'angleVertical',angle},{type:'angleVertical',angle});
+  },
+  parallelCorresponding(){return parallelAngles('corresponding');},
+  parallelAlternateInterior(){return parallelAngles('alternate interior');},
+  parallelAlternateExterior(){return parallelAngles('alternate exterior');},
+  parallelSameSideInterior(){return parallelAngles('same-side interior');},
+  parallelSameSideExterior(){return parallelAngles('same-side exterior');},
+  parallelogramOpposite(){return parallelogramAngles('opposite');},
+  parallelogramAdjacent(){return parallelogramAngles('adjacent');},
+  isoscelesBase(){
+    const vertex=R(55,105),base=(180-vertex)/2;if(!Number.isInteger(base))return null;
+    return angleMC('The two sloping sides of the triangle are equal. Find the missing base angle x.',base,angleWrong(base,[vertex,180-vertex,90-vertex]),
+      {t:'angleIsoBase',vertex,base},{type:'angleIsosceles',vertex,base,missing:'base'});
+  },
+  isoscelesVertex(){
+    const base=R(38,73),vertex=180-2*base;
+    return angleMC('The two sloping sides of the triangle are equal. Find the vertex angle x.',vertex,angleWrong(vertex,[base,180-base,90-base]),
+      {t:'angleIsoVertex',vertex,base},{type:'angleIsosceles',vertex,base,missing:'vertex'});
+  }
+};
+function parallelAngles(relation){
+  const acute=R(50,75),obtuse=180-acute;
+  const pair={
+    'corresponding':pick([[1,5],[0,4],[2,6],[3,7]]),
+    'alternate interior':pick([[2,4],[3,5]]),
+    'alternate exterior':pick([[0,6],[1,7]]),
+    'same-side interior':pick([[2,5],[3,4]]),
+    'same-side exterior':pick([[0,7],[1,6]])
+  }[relation];
+  const measure=i=>[obtuse,acute,obtuse,acute][i%4],given=measure(pair[0]),answer=measure(pair[1]);
+  return angleMC(`Two parallel lines are cut by a transversal. The marked angles are ${relation}. Find x.`,answer,
+    angleWrong(answer,[given,90,acute,obtuse].filter(v=>v!==answer)),
+    {t:'angleParallel',relation,pair,acute,given,answer},{type:'angleParallel',relation,pair,acute,given,answer});
+}
+function parallelogramAngles(relation){
+  const acute=R(50,75),obtuse=180-acute,opposite=relation==='opposite',given=pick([acute,obtuse]),answer=opposite?given:180-given;
+  return angleMC(`ABCD is a parallelogram. Find the angle marked x ${opposite?'opposite':'next to'} the given angle.`,answer,
+    angleWrong(answer,[given,acute,obtuse]),{t:'angleParallelogram',relation,acute,given,answer},
+    {type:'angleParallelogram',relation,acute,given,answer});
+}
+
+/* =====================================================================
+   9. AREA AND PERIMETER
+   ===================================================================== */
+const measureMC=(text,answer,wrong,unit,meta,fig)=>mc(text,opt(answer,`${fmt(answer)} ${unit}`),
+  nums(answer,wrong,v=>`${fmt(v)} ${unit}`,1,v=>v>0),meta,fig);
+const AREA={
+  irregularGrid(){
+    // L-shaped polygon: an outer rectangle with a corner rectangle removed.
+    const w=R(5,9),h=R(5,8),cutW=R(2,w-2),cutH=R(2,h-2),answer=w*h-cutW*cutH;
+    const vertices=[[0,0],[w,0],[w,h-cutH],[w-cutW,h-cutH],[w-cutW,h],[0,h]];
+    return measureMC('Each grid square is 1 square unit. What is the area of the shaded polygon?',answer,
+      [w*h,cutW*cutH,2*(w+h),answer+cutW,answer-cutH,answer+cutH],'square units',
+      {t:'areaIrregular',w,h,cutW,cutH,answer},{type:'areaGridPolygon',w,h,cutW,cutH,vertices});
+  },
+  squareArea(){
+    const side=R(3,15),answer=side*side;
+    return measureMC(`A square has a side length of ${side} cm. What is its area?`,answer,
+      [4*side,2*side,side*side*2,side+side,side*side+side],'cm²',
+      {t:'areaSquare',side,answer},{type:'measureSquare',side,question:'area'});
+  },
+  squarePerimeter(){
+    const side=R(3,18),answer=4*side;
+    return measureMC(`A square has a side length of ${side} cm. What is its perimeter?`,answer,
+      [side*side,2*side,side+4,4*side*side,answer+side],'cm',
+      {t:'perimeterSquare',side,answer},{type:'measureSquare',side,question:'perimeter'});
+  },
+  rectangleArea(){
+    const w=R(4,18),h=R(3,13),answer=w*h;
+    return measureMC(`A rectangle is ${w} cm long and ${h} cm wide. What is its area?`,answer,
+      [2*(w+h),w+h,2*w*h,w*h+w,w*w+h*h],'cm²',
+      {t:'areaRectangle',w,h,answer},{type:'measureRectangle',w,h,question:'area',unit:'cm'});
+  },
+  rectanglePerimeter(){
+    const w=R(5,19),h=R(3,12),answer=2*(w+h);
+    return measureMC(`A rectangle is ${w} m long and ${h} m wide. What is its perimeter?`,answer,
+      [w*h,w+h,2*w+h,w+2*h,4*w],'m',
+      {t:'perimeterRectangle',w,h,answer},{type:'measureRectangle',w,h,question:'perimeter',unit:'m'});
+  },
+  missingWidth(){
+    const w=R(3,14),h=R(3,12),area=w*h;
+    return measureMC(`A rectangle has an area of ${area} cm² and a length of ${w} cm. What is its width?`,h,
+      [area-w,area+w,area/h,w,2*(w+h)],'cm',
+      {t:'missingWidth',w,h,area},{type:'measureRectangle',w,h,question:'missingWidth',unit:'cm'});
+  },
+  missingLength(){
+    const w=R(5,18),h=R(3,11),area=w*h;
+    return measureMC(`A rectangle has an area of ${area} m² and a width of ${h} m. What is its length?`,w,
+      [area-h,area+h,area/w,h,2*(w+h)],'m',
+      {t:'missingLength',w,h,area},{type:'measureRectangle',w,h,question:'missingLength',unit:'m'});
+  },
+  gardenArea(){
+    const w=R(8,25),h=R(5,18),answer=w*h;
+    return measureMC(`A rectangular school garden is ${w} m long and ${h} m wide. How many square meters does it cover?`,answer,
+      [2*(w+h),w+h,w*h*2,w*w,h*h],'m²',
+      {t:'gardenArea',w,h,answer},{type:'measureRectangle',w,h,question:'area',unit:'m'});
+  },
+  fencePerimeter(){
+    const w=R(9,26),h=R(5,17),answer=2*(w+h);
+    return measureMC(`A rectangular playground is ${w} m long and ${h} m wide. How many meters of fence are needed to go around it once?`,answer,
+      [w*h,w+h,2*w+h,w+2*h,answer+w],'m',
+      {t:'fencePerimeter',w,h,answer},{type:'measureRectangle',w,h,question:'perimeter',unit:'m'});
+  },
+  floorTiles(){
+    const w=R(5,14),h=R(4,11),answer=w*h;
+    return measureMC(`A rectangular floor is ${w} m long and ${h} m wide. If one square tile covers 1 m², how many tiles cover the floor?`,answer,
+      [2*(w+h),w+h,2*w*h,answer+w,answer-h],'tiles',
+      {t:'floorTiles',w,h,answer},{type:'measureRectangle',w,h,question:'area',unit:'m'});
+  },
+  parallelogramArea(){
+    const base=R(5,17),height=R(3,12),slant=R(2,5),answer=base*height;
+    return measureMC(`A parallelogram has a base of ${base} cm and a perpendicular height of ${height} cm. What is its area?`,answer,
+      [base+height,2*(base+height),Math.round(answer/2),answer+base,base*(height+slant)],'cm²',
+      {t:'areaParallelogram',base,height,slant,answer},{type:'measureParallelogram',base,height,slant,unit:'cm'});
+  },
+  parallelogramContext(){
+    const base=R(8,22),height=R(4,12),slant=R(2,5),answer=base*height;
+    return measureMC(`A parallelogram-shaped mural has a base of ${base} m and a perpendicular height of ${height} m. What area does the mural cover?`,answer,
+      [base+height,2*(base+height),Math.round(answer/2),answer+height,base*(height+slant)],'m²',
+      {t:'muralParallelogram',base,height,slant,answer},{type:'measureParallelogram',base,height,slant,unit:'m'});
+  }
+};
+
+/* =====================================================================
+   10. VOLUME AND SURFACE AREA
+   ===================================================================== */
+const solidMC=(text,answer,wrong,unit,meta,fig)=>mc(text,opt(answer,`${fmt(answer)} ${unit}`),
+  nums(answer,wrong,v=>`${fmt(v)} ${unit}`,1,v=>v>0),meta,fig);
+const SOLID={
+  cubeVolumeCm(){return cubeVolume('cm');},
+  cubeVolumeM(){return cubeVolume('m');},
+  prismVolumeCm(){return prismVolume('cm');},
+  prismVolumeM(){return prismVolume('m');},
+  heightFromBaseArea(){
+    const unit=pick(['cm','m']),l=R(3,12),w=R(2,9),h=R(2,11),base=l*w,volume=base*h;
+    return solidMC(`A rectangular prism has a base area of ${base} ${unit}² and a volume of ${volume} ${unit}³. What is its height?`,h,
+      [l,w,base,volume-base,2*h,h+l],unit,{t:'solidHeight',l,w,h,base,volume,unit},
+      {type:'solidPrism',l,w,h,unit,show:'baseHeight',base});
+  },
+  cubeSurfaceArea(){
+    const unit=pick(['cm','m']),side=R(3,13),answer=6*side*side;
+    return solidMC(`A cube has side length ${side} ${unit}. What is its total surface area?`,answer,
+      [side**3,4*side*side,side*side,6*side,answer+side*side],`${unit}²`,
+      {t:'cubeSurface',side,answer,unit},{type:'solidCube',side,unit});
+  },
+  prismSurfaceArea(){
+    const unit=pick(['cm','m']),l=R(4,14),w=R(2,10),h=R(3,11),answer=2*(l*w+l*h+w*h);
+    return solidMC(`A rectangular prism is ${l} ${unit} long, ${w} ${unit} wide, and ${h} ${unit} high. What is its total surface area?`,answer,
+      [l*w*h,l*w+l*h+w*h,2*(l*w+l*h),2*(l+w+h),answer+l*w],`${unit}²`,
+      {t:'prismSurface',l,w,h,answer,unit},{type:'solidPrism',l,w,h,unit,show:'all'});
+  },
+  surfaceFromNetCm(){return netSurface('cm');},
+  surfaceFromNetM(){return netSurface('m');},
+  cubeNetSurface(){
+    const unit=pick(['cm','m']),side=R(3,12),answer=6*side*side;
+    return solidMC(`The diagram is a net of a cube. Each edge is ${side} ${unit}. What is the cube's total surface area?`,answer,
+      [side**3,5*side*side,4*side*side,side*side,answer+side],`${unit}²`,
+      {t:'cubeNetSurface',side,answer,unit},{type:'solidCubeNet',side,unit});
+  },
+  packingVolume(){
+    const l=R(15,45),w=R(10,30),h=R(8,25),answer=l*w*h;
+    return solidMC(`A rectangular storage box is ${l} cm long, ${w} cm wide, and ${h} cm high. What is its volume?`,answer,
+      [l*w,2*(l*w+l*h+w*h),l+w+h,l*w*(h+1),answer-h*w],'cm³',
+      {t:'packingVolume',l,w,h,answer},{type:'solidPrism',l,w,h,unit:'cm',show:'all'});
+  },
+  roomVolume(){
+    const l=R(4,12),w=R(3,9),h=R(2,5),answer=l*w*h;
+    return solidMC(`A rectangular room is ${l} m long, ${w} m wide, and ${h} m high. What is its volume?`,answer,
+      [l*w,2*(l*w+l*h+w*h),l+w+h,l*w*(h+1),answer+h*w],'m³',
+      {t:'roomVolume',l,w,h,answer},{type:'solidPrism',l,w,h,unit:'m',show:'all'});
+  }
+};
+function cubeVolume(unit){
+  const side=R(3,12),answer=side**3;
+  return solidMC(`A cube has an edge length of ${side} ${unit}. What is its volume?`,answer,
+    [side*side,6*side*side,4*side,side**3+side*side,side**3-side],`${unit}³`,
+    {t:'cubeVolume',side,answer,unit},{type:'solidCube',side,unit});
+}
+function prismVolume(unit){
+  const l=R(4,14),w=R(3,10),h=R(2,11),answer=l*w*h;
+  return solidMC(`A rectangular prism is ${l} ${unit} long, ${w} ${unit} wide, and ${h} ${unit} high. What is its volume?`,answer,
+    [l*w,2*(l*w+l*h+w*h),l+w+h,l*w*(h+1),answer-l*w],`${unit}³`,
+    {t:'prismVolume',l,w,h,answer,unit},{type:'solidPrism',l,w,h,unit,show:'all'});
+}
+function netSurface(unit){
+  const l=R(4,10),w=R(2,7),h=R(2,8),answer=2*(l*w+l*h+w*h);
+  return solidMC(`The diagram is a net of a rectangular prism. What is its total surface area?`,answer,
+    [l*w*h,l*w+l*h+w*h,2*l*w+2*l*h,2*(l+w+h),answer+l*w],`${unit}²`,
+    {t:'prismNetSurface',l,w,h,answer,unit},{type:'solidPrismNet',l,w,h,unit});
+}
+
+/* =====================================================================
+   11. DATA, STATISTICS AND PROBABILITY
+   ===================================================================== */
+const statsNumber=(text,answer,wrong,meta,fig)=>mc(text,opt(answer,fmt(answer)),
+  nums(answer,wrong,fmt,1,v=>v>=0),meta,fig);
+function stemData(){
+  const modal=R(31,48),values=[R(20,28),R(21,29),R(30,39),R(30,39),
+    R(40,49),R(40,49),R(50,56),modal,modal,modal];
+  values.sort((a,b)=>a-b);
+  return {values,modal,stems:[2,3,4,5].map(stem=>({stem,leaves:values.filter(v=>Math.floor(v/10)===stem).map(v=>v%10)}))};
+}
+function dotData(){
+  const mode=R(1,4),counts=Array.from({length:6},()=>R(1,3));
+  counts[mode]=6;
+  return {counts,mode,total:counts.reduce((a,b)=>a+b,0)};
+}
+function barData(){
+  const shift=R(-2,2)*3;
+  return {labels:['Adventure','Science','Mystery','Sports','History'],values:[48,36,54,30,42].map(x=>x+shift)};
+}
+function doubleBarData(){
+  const labels=['Sports Day','Book Fair','Music Night','Science Expo','Family Day'];
+  const a=[42,55,38,60,50],b=[45,48,52,57,63];
+  for(let i=0;i<5;i++){const shift=R(-4,4);a[i]+=shift;b[i]+=shift;}
+  return {labels,a,b};
+}
+function lineData(){
+  const labels=['Mon','Tue','Wed','Thu','Fri','Sat'];
+  const a=[40,55,60,52,68,80],b=[30,45,64,70,66,75];
+  for(let i=0;i<6;i++){const shift=R(-3,3);a[i]+=shift;b[i]+=shift;}
+  return {labels,a,b};
+}
+const graphChoice=(text,answer,choices,meta,fig)=>mc(text,opt(answer,answer),
+  choices.filter(v=>v!==answer).map(v=>opt(v,v)),meta,fig);
+const STAT={
+  meanFive(){
+    const mean=R(12,35),values=shuffle([-5,-2,0,3,4].map(d=>mean+d));
+    return statsNumber(`A school kiosk sold ${values.join(', ')} water bottles over five days. What was the mean number sold per day?`,mean,
+      [mean-2,mean-1,mean+1,mean+2],{t:'meanFive',values,answer:mean});
+  },
+  meanSix(){
+    const mean=R(14,31),values=shuffle([-6,-3,-1,1,3,6].map(d=>mean+d));
+    return statsNumber(`A team scored ${values.join(', ')} points in six rounds. What was its mean score?`,mean,
+      [mean-3,mean-1,mean+1,mean+3],{t:'meanSix',values,answer:mean});
+  },
+  missingFive(){
+    const mean=R(15,38),missing=mean+R(-5,5),rest=shuffle([mean-4,mean-1,mean+2,5*mean-missing-(3*mean-3)]);
+    return statsNumber(`The mean of five scores is ${mean}. Four scores are ${rest.join(', ')}. What is the missing score?`,missing,
+      [mean,missing-2,missing+2,5*mean-rest[0]-rest[1]],{t:'missingFive',mean,rest,answer:missing});
+  },
+  missingFour(){
+    const mean=R(12,30),missing=mean+R(-4,4),rest=shuffle([mean-3,mean+2,4*mean-missing-2*mean+1]);
+    return statsNumber(`Four students read an average of ${mean} pages each. Three read ${rest.join(', ')} pages. How many pages did the fourth student read?`,missing,
+      [mean,missing-3,missing+3,4*mean-rest[0]-rest[1]],{t:'missingFour',mean,rest,answer:missing});
+  },
+  stemCount(){
+    const d=stemData(),answer=d.values.length;
+    return statsNumber('How many results are shown in the stem-and-leaf plot?',answer,
+      [answer-2,answer-1,answer+1,answer+2],{t:'stemCount',...d,answer},{type:'statsStem',stems:d.stems});
+  },
+  stemMode(){
+    const d=stemData(),answer=d.modal;
+    return statsNumber('Which number occurs most often in the stem-and-leaf plot?',answer,
+      [d.values[0],d.values.at(-1),answer-10,answer+10],{t:'stemMode',...d,answer},{type:'statsStem',stems:d.stems});
+  },
+  stemGreatest(){
+    const d=stemData(),answer=d.values.at(-1);
+    return statsNumber('What is the greatest value in the stem-and-leaf plot?',answer,
+      [d.values[0],d.values.at(-2),d.modal,answer-10],{t:'stemGreatest',...d,answer},{type:'statsStem',stems:d.stems});
+  },
+  stemAboveForty(){
+    const d=stemData(),answer=d.values.filter(v=>v>40).length;
+    return statsNumber('How many results in the stem-and-leaf plot are greater than 40?',answer,
+      [answer-2,answer-1,answer+1,answer+2],{t:'stemAboveForty',...d,answer},{type:'statsStem',stems:d.stems});
+  },
+  dotExact(){
+    const d=dotData(),at=R(0,5),answer=d.counts[at];
+    return statsNumber(`The dot plot shows goals scored by students. How many students scored exactly ${at} goals?`,answer,
+      [answer-2,answer-1,answer+1,answer+2],{t:'dotExact',...d,at,answer},{type:'statsDot',counts:d.counts,axis:'Goals scored'});
+  },
+  dotMode(){
+    const d=dotData(),answer=d.mode;
+    return statsNumber('What number of goals is most common in the dot plot?',answer,
+      [answer-2,answer-1,answer+1,answer+2],{t:'dotMode',...d,answer},{type:'statsDot',counts:d.counts,axis:'Goals scored'});
+  },
+  dotAtLeast(){
+    const d=dotData(),answer=d.counts[4]+d.counts[5];
+    return statsNumber('How many students scored 4 or more goals in the dot plot?',answer,
+      [d.counts[4],d.counts[5],answer-1,answer+1],{t:'dotAtLeast',...d,answer},{type:'statsDot',counts:d.counts,axis:'Goals scored'});
+  },
+  dotTotal(){
+    const d=dotData(),answer=d.total;
+    return statsNumber('How many students are represented by the dot plot?',answer,
+      [answer-3,answer-2,answer+2,answer+3],{t:'dotTotal',...d,answer},{type:'statsDot',counts:d.counts,axis:'Goals scored'});
+  },
+  dotAtMost(){
+    const d=dotData(),answer=d.counts.slice(0,4).reduce((a,b)=>a+b,0);
+    return statsNumber('How many students scored 3 goals or fewer in the dot plot?',answer,
+      [answer-2,answer-1,answer+1,answer+2],{t:'dotAtMost',...d,answer},{type:'statsDot',counts:d.counts,axis:'Goals scored'});
+  },
+  barMost(){
+    const d=barData(),answer='Mystery';
+    return graphChoice('Which library section had the most books borrowed?',answer,d.labels.filter(x=>x!==answer),
+      {t:'barMost',...d,answer},{type:'statsBar',...d});
+  },
+  barDifference(){
+    const d=barData(),answer=d.values[2]-d.values[3];
+    return statsNumber('How many more Mystery books than Sports books were borrowed?',answer,
+      [answer-6,answer+6,d.values[2]+d.values[3],d.values[0]-d.values[3]],
+      {t:'barDifference',...d,answer},{type:'statsBar',...d});
+  },
+  barTotal(){
+    const d=barData(),answer=d.values.reduce((a,b)=>a+b,0);
+    return statsNumber('How many books were borrowed from all five library sections?',answer,
+      [answer-12,answer-6,answer+6,answer+12],{t:'barTotal',...d,answer},{type:'statsBar',...d});
+  },
+  barMean(){
+    const d=barData(),answer=d.values.reduce((a,b)=>a+b,0)/5;
+    return statsNumber('What was the mean number of books borrowed per section?',answer,
+      [answer-6,answer-3,answer+3,answer+6],{t:'barMean',...d,answer},{type:'statsBar',...d});
+  },
+  doubleBarMost(){
+    const d=doubleBarData(),answer='Science Expo';
+    return graphChoice('At which event did Group A sell the most snack packs?',answer,d.labels.filter(x=>x!==answer),
+      {t:'doubleBarMost',...d,answer},{type:'statsDoubleBar',...d});
+  },
+  doubleBarGap(){
+    const d=doubleBarData(),answer='Music Night';
+    return graphChoice('At which event was the difference between the groups greatest?',answer,d.labels.filter(x=>x!==answer),
+      {t:'doubleBarGap',...d,answer},{type:'statsDoubleBar',...d});
+  },
+  doubleBarTotalA(){
+    const d=doubleBarData(),answer=d.a.reduce((a,b)=>a+b,0);
+    return statsNumber('How many snack packs did Group A sell across all five events?',answer,
+      [d.b.reduce((a,b)=>a+b,0),answer-10,answer+10,answer+20],
+      {t:'doubleBarTotalA',...d,answer},{type:'statsDoubleBar',...d});
+  },
+  doubleBarDifference(){
+    const d=doubleBarData(),answer=d.b.reduce((a,b)=>a+b,0)-d.a.reduce((a,b)=>a+b,0);
+    return mc('Which group sold more snack packs overall, and by how many?',
+      opt('B'+answer,`Group B by ${answer}`),[
+        opt('A'+answer,`Group A by ${answer}`),opt('B'+(answer+5),`Group B by ${answer+5}`),
+        opt('tie','The groups sold the same number')],{t:'doubleBarDifference',...d,answer},{type:'statsDoubleBar',...d});
+  },
+  lineFirstMore(){
+    const d=lineData(),answer='Wednesday';
+    return graphChoice('On which day did Pool B first have more visitors than Pool A?',answer,
+      ['Monday','Tuesday','Thursday','Friday'],{t:'lineFirstMore',...d,answer},{type:'statsLine',...d});
+  },
+  lineIncrease(){
+    const d=lineData(),answer=d.a.at(-1)-d.a[0];
+    return statsNumber('By how many visitors did Pool A increase from Monday to Saturday?',answer,
+      [answer-5,answer+5,d.b.at(-1)-d.b[0],d.a.at(-1)-d.a[1]],
+      {t:'lineIncrease',...d,answer},{type:'statsLine',...d});
+  },
+  lineDecrease(){
+    const d=lineData(),answer='Wednesday to Thursday';
+    return graphChoice('Between which two days did Pool A decrease?',answer,
+      ['Monday to Tuesday','Tuesday to Wednesday','Thursday to Friday','Friday to Saturday'],
+      {t:'lineDecrease',...d,answer},{type:'statsLine',...d});
+  },
+  lineGreatestGap(){
+    const d=lineData(),answer='Thursday';
+    return graphChoice('On which day was the difference between the two pools greatest?',answer,
+      ['Monday','Tuesday','Wednesday','Friday','Saturday'],
+      {t:'lineGreatestGap',...d,answer},{type:'statsLine',...d});
+  },
+  spinnerMostLikely(){
+    const counts=shuffle([6,4,2]),letters=['A','B','C'],answer=letters[counts.indexOf(6)];
+    return mc('The spinner has 12 equal sections. Which letter is most likely to be selected?',
+      opt(answer,answer),letters.filter(x=>x!==answer).map(x=>opt(x,x)).concat(opt('equal','All equally likely')),
+      {t:'spinnerMostLikely',counts,answer},{type:'statsSpinner',counts});
+  },
+  marbleMostLikely(){
+    const blacks=shuffle([1,2,3,4]),answer=blacks.indexOf(4)+1;
+    return mc('Each container has five marbles. From which container is a black marble most likely to be picked?',
+      opt(answer,`Container ${answer}`),[1,2,3,4].filter(v=>v!==answer).map(v=>opt(v,`Container ${v}`)),
+      {t:'marbleMostLikely',blacks,answer},{type:'statsMarbles',blacks});
+  },
+  likelihoodBag(){
+    const red=pick([0,1,2,3,4,5,6]),blue=6-red;
+    const answer=red===0?'Impossible':red===6?'Certain':red===3?'Equally likely':red>3?'Likely':'Unlikely';
+    const all=['Impossible','Unlikely','Equally likely','Likely','Certain'];
+    return mc('One marble is picked without looking. How likely is it to be red?',opt(answer,answer),
+      all.filter(x=>x!==answer).map(x=>opt(x,x)),{t:'likelihoodBag',red,blue,answer},{type:'statsBag',red,blue});
+  },
+  fairCoin(){
+    const context=fresh(['Before a fair coin toss','In a fair coin game','When tossing a fair coin once',
+      'A student tosses a fair coin','A referee flips a fair coin','A fair coin is tossed at the start of a game'],'coin');
+    return mc(`${context}. Which statement about heads and tails is true?`,
+      opt('equal','Heads and tails are equally likely'),[
+        opt('heads','Heads is more likely'),opt('tails','Tails is more likely'),opt('impossible','Tails is impossible')],
+      {t:'fairCoin',answer:'equal'},{type:'statsCoin'});
+  }
+};
+
+/* =====================================================================
+   Registro de temas (el orden es el orden de los botones)
+   ===================================================================== */
+const TOPICS={
+  numbers:{name:'Numbers',subs:Object.values(NUM)},
+  ratio:{name:'Ratio and Proportion',subs:Object.values(RAT)},
+  decimals:{name:'Decimals',subs:Object.values(DEC)},
+  fractions:{name:'Fractions',subs:Object.values(FRA)},
+  percent:{name:'Percent',subs:Object.values(PCT)},
+  algebra:{name:'Algebra',subs:Object.values(ALG)},
+  transformations:{name:'Transformations',subs:Object.values(TRANS)},
+  angles:{name:'Angles',subs:Object.values(ANG)},
+  area:{name:'Area & Perimeter',subs:Object.values(AREA)},
+  solids:{name:'Volume & Surface Area',subs:Object.values(SOLID)},
+  statistics:{name:'Data & Statistics',subs:Object.values(STAT)}
+};
+function makeQuiz(topic,count){
+  USED.clear();
+  const keys=Object.keys(TOPICS); if(!keys.length) return [];
+  const plan=[];
+  if(topic==='mixto'){ const ord=shuffle([...keys]); for(let i=0;i<count;i++) plan.push(ord[i%ord.length]); }
+  else if(TOPICS[topic]){ for(let i=0;i<count;i++) plan.push(topic); }
+  else return [];
+  const cyc={},out=[],seen=new Set();
+  for(const t of plan){
+    const subs=TOPICS[t].subs; if(!cyc[t]) cyc[t]={ord:shuffle(subs.map((_,i)=>i)),i:0};
+    const c=cyc[t]; let q=null,tries=0;
+    while(!q&&tries++<80){ q=subs[c.ord[c.i%c.ord.length]](); if(q&&seen.has(q.text+'|'+JSON.stringify(q.fig||null))) q=null; }
+    c.i++; if(q){ seen.add(q.text+'|'+JSON.stringify(q.fig||null)); out.push(q); }
+  }
+  return topic==='mixto'?shuffle(out):out;
+}
+
+/* Figuras (se dibujan en cada pantalla a partir de números, nunca de HTML guardado) */
+function renderFig(f){
+  if(!f||typeof f!=='object') return '';
+  const I=(v,lo,hi)=>Number.isInteger(v)&&v>=lo&&v<=hi;
+  const S=new Set(Array.isArray(f.s)?f.s.filter(x=>Number.isInteger(x)):[]);
+  const fill=i=>S.has(i)?'#1F8A7A':'#FFFFFF';
+  const st='stroke="#1B2A4A" stroke-width="2" stroke-linejoin="round"';
+  if(f.type==='statsStem'&&Array.isArray(f.stems)&&f.stems.length===4&&f.stems.every(r=>I(r.stem,2,5)&&Array.isArray(r.leaves)&&r.leaves.length<=12&&r.leaves.every(v=>I(v,0,9)))){
+    const rows=f.stems.map((r,i)=>`<rect x="55" y="${80+i*55}" width="490" height="55" fill="${i%2?'#FFFFFF':'#F3F8FD'}" stroke="#C8DAEB"/><text x="178" y="${116+i*55}" text-anchor="middle" font-size="26" font-weight="800" fill="#1B3455">${r.stem}</text><text x="282" y="${116+i*55}" font-size="24" letter-spacing="5" fill="#1B3455">${r.leaves.join(' ')}</text>`).join('');
+    return `<svg class="fig stats" viewBox="0 0 600 370" role="img" aria-label="Stem-and-leaf plot with stems 2 through 5 and key 3 vertical bar 5 means 35">
+      <rect x="8" y="8" width="584" height="354" rx="22" fill="#FFFFFF" stroke="#CDDDED" stroke-width="2"/>
+      <path d="M55 80h490V33H55Z" fill="#DDF4F0" stroke="#C8DAEB"/><text x="178" y="65" text-anchor="middle" font-size="23" font-weight="900" fill="#174F5D">STEM</text><text x="390" y="65" text-anchor="middle" font-size="23" font-weight="900" fill="#174F5D">LEAVES</text>
+      ${rows}<path d="M258 33V300" stroke="#A5C2D8" stroke-width="2"/>
+      <text x="65" y="339" font-size="20" font-weight="700" fill="#1B3455">Key: 3 | 5 = 35</text></svg>`;
+  }
+  if(f.type==='statsDot'&&Array.isArray(f.counts)&&f.counts.length===6&&f.counts.every(v=>I(v,0,8))){
+    const dots=f.counts.map((n,i)=>Array.from({length:n},(_,j)=>`<circle cx="${85+i*86}" cy="${244-j*30}" r="10" fill="#247DBB" stroke="#FFFFFF" stroke-width="2"/>`).join('')).join('');
+    const ticks=f.counts.map((_,i)=>`<path d="M${85+i*86} 263v11" stroke="#263D60" stroke-width="2"/><text x="${85+i*86}" y="306" text-anchor="middle" font-size="25" font-weight="800" fill="#1B3455">${i}</text>`).join('');
+    return `<svg class="fig stats" viewBox="0 0 600 365" role="img" aria-label="Dot plot for values zero through five">
+      <rect x="8" y="8" width="584" height="349" rx="22" fill="#FFFFFF" stroke="#CDDDED" stroke-width="2"/>
+      <path d="M58 264H542" stroke="#263D60" stroke-width="3"/>${dots}${ticks}
+      <text x="300" y="344" text-anchor="middle" font-size="21" font-weight="700" fill="#284668">Goals scored</text></svg>`;
+  }
+  if(f.type==='statsBar'&&Array.isArray(f.values)&&f.values.length===5&&f.values.every(v=>I(v,0,60))){
+    const labels=['Adventure','Science','Mystery','Sports','History'];
+    const lines=[0,15,30,45,60].map(v=>`<path d="M75 ${315-v*4}H610" stroke="#DCE7F2" stroke-width="2"/><text x="63" y="${321-v*4}" text-anchor="end" font-size="19" fill="#31506C">${v}</text>`).join('');
+    const bars=f.values.map((v,i)=>`<rect x="${91+i*105}" y="${315-v*4}" width="66" height="${v*4}" rx="6" fill="${['#247DBB','#14A89B','#E2AE35','#745FBD','#ED7D73'][i]}"/><text x="${124+i*105}" y="${305-v*4}" text-anchor="middle" font-size="22" font-weight="900" fill="#193A60">${v}</text><text x="${124+i*105}" y="348" text-anchor="middle" font-size="17" font-weight="750" fill="#193A60">${labels[i]}</text>`).join('');
+    return `<svg class="fig stats" viewBox="0 0 650 385" role="img" aria-label="Bar graph of books borrowed from five library sections"><rect x="6" y="6" width="638" height="373" rx="20" fill="#FFFFFF" stroke="#CDDDED" stroke-width="2"/><text x="325" y="35" text-anchor="middle" font-size="23" font-weight="900" fill="#173F75">BOOKS BORROWED</text>${lines}${bars}<path d="M75 315H610" stroke="#284668" stroke-width="3"/></svg>`;
+  }
+  if(f.type==='statsDoubleBar'&&Array.isArray(f.a)&&Array.isArray(f.b)&&f.a.length===5&&f.b.length===5&&[...f.a,...f.b].every(v=>I(v,0,80))){
+    const labels=[['Sports','Day'],['Book','Fair'],['Music','Night'],['Science','Expo'],['Family','Day']];
+    const lines=[0,20,40,60,80].map(v=>`<path d="M62 ${317-v*3.2}H622" stroke="#DCE7F2" stroke-width="2"/><text x="51" y="${323-v*3.2}" text-anchor="end" font-size="19" fill="#31506C">${v}</text>`).join('');
+    const bars=f.a.map((v,i)=>{const x=88+i*110,w=f.b[i];return `<rect x="${x}" y="${317-v*3.2}" width="31" height="${v*3.2}" rx="4" fill="#277EBB"/><rect x="${x+34}" y="${317-w*3.2}" width="31" height="${w*3.2}" rx="4" fill="#E9B842"/><text x="${x+15}" y="${308-v*3.2}" text-anchor="middle" font-size="16" font-weight="800" fill="#173F75">${v}</text><text x="${x+49}" y="${308-w*3.2}" text-anchor="middle" font-size="16" font-weight="800" fill="#79520A">${w}</text><text x="${x+32}" y="342" text-anchor="middle" font-size="16" font-weight="800" fill="#173F75">${labels[i][0]}</text><text x="${x+32}" y="360" text-anchor="middle" font-size="16" font-weight="800" fill="#173F75">${labels[i][1]}</text>`;}).join('');
+    return `<svg class="fig stats" viewBox="0 0 680 400" role="img" aria-label="Double bar graph comparing Group A and Group B snack sales across five events"><rect x="6" y="6" width="668" height="388" rx="20" fill="#FFFFFF" stroke="#CDDDED" stroke-width="2"/><text x="255" y="35" text-anchor="middle" font-size="23" font-weight="900" fill="#173F75">SNACK PACKS SOLD</text><rect x="460" y="18" width="15" height="15" fill="#277EBB"/><text x="482" y="32" font-size="17" fill="#173F75">Group A</text><rect x="555" y="18" width="15" height="15" fill="#E9B842"/><text x="577" y="32" font-size="17" fill="#173F75">Group B</text>${lines}${bars}<path d="M62 317H622" stroke="#284668" stroke-width="3"/></svg>`;
+  }
+  if(f.type==='statsLine'&&Array.isArray(f.a)&&Array.isArray(f.b)&&f.a.length===6&&f.b.length===6&&[...f.a,...f.b].every(v=>I(v,0,90))){
+    const labels=['Mon','Tue','Wed','Thu','Fri','Sat'],x=i=>83+i*104,y=v=>318-v*2.8;
+    const lines=[0,20,40,60,80].map(v=>`<path d="M72 ${y(v)}H615" stroke="#DCE7F2" stroke-width="2"/><text x="62" y="${y(v)+6}" text-anchor="end" font-size="19" fill="#31506C">${v}</text>`).join('');
+    const plots=(arr,color,labelOffset)=>`<polyline points="${arr.map((v,i)=>`${x(i)},${y(v)}`).join(' ')}" fill="none" stroke="${color}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>${arr.map((v,i)=>`<circle cx="${x(i)}" cy="${y(v)}" r="6" fill="${color}" stroke="#FFFFFF" stroke-width="2"/><text x="${x(i)}" y="${y(v)+labelOffset}" text-anchor="middle" font-size="18" font-weight="900" fill="${color}">${v}</text>`).join('')}`;
+    const ticks=labels.map((lab,i)=>`<text x="${x(i)}" y="354" text-anchor="middle" font-size="20" font-weight="800" fill="#173F75">${lab}</text>`).join('');
+    return `<svg class="fig stats" viewBox="0 0 680 390" role="img" aria-label="Line graph comparing Pool A and Pool B visitors Monday through Saturday"><rect x="6" y="6" width="668" height="378" rx="20" fill="#FFFFFF" stroke="#CDDDED" stroke-width="2"/><text x="240" y="35" text-anchor="middle" font-size="23" font-weight="900" fill="#173F75">POOL VISITORS</text><path d="M465 26h25" stroke="#277EBB" stroke-width="4"/><text x="495" y="32" font-size="17" fill="#173F75">Pool A</text><path d="M565 26h25" stroke="#E2A628" stroke-width="4"/><text x="595" y="32" font-size="17" fill="#173F75">Pool B</text>${lines}${plots(f.a,'#277EBB',-12)}${plots(f.b,'#B77A0A',23)}${ticks}<path d="M72 318H615" stroke="#284668" stroke-width="3"/></svg>`;
+  }
+  if(f.type==='statsSpinner'&&Array.isArray(f.counts)&&f.counts.length===3&&f.counts.every(v=>I(v,1,10))&&f.counts.reduce((a,b)=>a+b,0)===12){
+    const colors=['#4B88D9','#FFD35A','#16A393'],labels=['A','B','C'];let n=0;
+    const sectors=f.counts.map((count,j)=>Array.from({length:count},()=>{const i=n++,a0=-Math.PI/2+2*Math.PI*i/12,a1=-Math.PI/2+2*Math.PI*(i+1)/12,mid=(a0+a1)/2;
+      return `<path d="M300 172L${300+124*Math.cos(a0)} ${172+124*Math.sin(a0)}A124 124 0 0 1 ${300+124*Math.cos(a1)} ${172+124*Math.sin(a1)}Z" fill="${colors[j]}" stroke="#FFFFFF" stroke-width="3"/><text x="${300+91*Math.cos(mid)}" y="${178+91*Math.sin(mid)}" text-anchor="middle" font-size="20" font-weight="900" fill="${j===1?'#263D60':'#FFFFFF'}">${labels[j]}</text>`;}).join('')).join('');
+    return `<svg class="fig stats" viewBox="0 0 600 340" role="img" aria-label="Spinner with twelve equal sections marked A B or C"><rect x="8" y="8" width="584" height="324" rx="22" fill="#FFFFFF" stroke="#CDDDED" stroke-width="2"/>${sectors}<circle cx="300" cy="172" r="8" fill="#1B3455"/><path d="M300 27l-13-18h26z" fill="#1B3455"/></svg>`;
+  }
+  if(f.type==='statsMarbles'&&Array.isArray(f.blacks)&&f.blacks.length===4&&f.blacks.every(v=>I(v,0,5))){
+    const jars=f.blacks.map((b,i)=>{
+      const x=32+i*143,dots=Array.from({length:5},(_,k)=>`<circle cx="${x+30+(k%2)*42}" cy="${130+Math.floor(k/2)*39}" r="15" fill="${k<b?'#28374E':'#FFFFFF'}" stroke="#28374E" stroke-width="2"/>`).join('');
+      return `<rect x="${x}" y="96" width="107" height="146" rx="20" fill="#E8F4FF" stroke="#3475A9" stroke-width="3"/><rect x="${x+10}" y="85" width="87" height="17" rx="5" fill="#A7CEE9" stroke="#3475A9" stroke-width="2"/>${dots}<text x="${x+54}" y="278" text-anchor="middle" font-size="21" font-weight="800" fill="#1B3455">${i+1}</text>`;}).join('');
+    return `<svg class="fig stats" viewBox="0 0 600 310" role="img" aria-label="Four containers of five marbles each, with varying numbers of black marbles"><rect x="8" y="8" width="584" height="294" rx="22" fill="#FFFFFF" stroke="#CDDDED" stroke-width="2"/><text x="300" y="53" text-anchor="middle" font-size="22" font-weight="800" fill="#1B3455">BLACK MARBLES</text>${jars}</svg>`;
+  }
+  if(f.type==='statsBag'&&I(f.red,0,6)&&I(f.blue,0,6)&&f.red+f.blue===6){
+    const dots=Array.from({length:6},(_,i)=>`<circle cx="${220+(i%3)*80}" cy="${134+Math.floor(i/3)*77}" r="25" fill="${i<f.red?'#E45D65':'#4B88D9'}" stroke="#FFFFFF" stroke-width="3"/>`).join('');
+    return `<svg class="fig stats" viewBox="0 0 600 320" role="img" aria-label="Bag containing ${f.red} red and ${f.blue} blue marbles"><rect x="8" y="8" width="584" height="304" rx="22" fill="#FFFFFF" stroke="#CDDDED" stroke-width="2"/><path d="M195 83Q190 61 215 52H385Q410 61 405 83L433 260Q435 279 415 283H185Q165 279 167 260Z" fill="#E8F4FF" stroke="#3475A9" stroke-width="4"/>${dots}<text x="300" y="42" text-anchor="middle" font-size="22" font-weight="800" fill="#1B3455">PICK ONE MARBLE</text></svg>`;
+  }
+  if(f.type==='statsCoin') return `<svg class="fig stats" viewBox="0 0 600 280" role="img" aria-label="Fair coin with heads and tails"><rect x="8" y="8" width="584" height="264" rx="22" fill="#FFFFFF" stroke="#CDDDED" stroke-width="2"/><circle cx="220" cy="136" r="80" fill="#FFD35A" stroke="#B48527" stroke-width="6"/><circle cx="380" cy="136" r="80" fill="#E8BE50" stroke="#B48527" stroke-width="6"/><text x="220" y="155" text-anchor="middle" font-size="52" font-weight="900" fill="#4A3817">H</text><text x="380" y="155" text-anchor="middle" font-size="52" font-weight="900" fill="#4A3817">T</text></svg>`;
+  if(f.type==='solidCube'&&I(f.side,1,50)){
+    const u=f.unit==='m'?'m':'cm';
+    return `<svg class="fig solid" viewBox="0 0 600 380" role="img" aria-label="Cube with edge length ${f.side} ${u}">
+      <rect x="7" y="7" width="586" height="366" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      <path d="M170 120L247 64H455L378 120Z" fill="#BBD8F5" stroke="#246AAF" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M378 120L455 64V274L378 330Z" fill="#8EBBE8" stroke="#246AAF" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M170 120H378V330H170Z" fill="#D8EAFB" stroke="#246AAF" stroke-width="4" stroke-linejoin="round"/>
+      <text x="270" y="359" text-anchor="middle" font-size="25" font-weight="900" fill="#173F75">${f.side} ${u}</text>
+      <text x="120" y="236" font-size="24" font-weight="900" fill="#173F75">${f.side} ${u}</text>
+      <text x="409" y="101" font-size="22" font-weight="900" fill="#173F75">${f.side} ${u}</text></svg>`;
+  }
+  if(f.type==='solidPrism'&&I(f.l,1,50)&&I(f.w,1,35)&&I(f.h,1,30)){
+    const u=f.unit==='m'?'m':'cm',missing=f.show==='baseHeight';
+    return `<svg class="fig solid" viewBox="0 0 640 390" role="img" aria-label="Rectangular prism with ${missing?'base area and unknown height':'length width and height'}">
+      <rect x="7" y="7" width="626" height="376" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      <path d="M155 131L227 70H498L426 131Z" fill="#BBD8F5" stroke="#246AAF" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M426 131L498 70V283L426 344Z" fill="#8EBBE8" stroke="#246AAF" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M155 131H426V344H155Z" fill="#D8EAFB" stroke="#246AAF" stroke-width="4" stroke-linejoin="round"/>
+      ${missing?`<text x="324" y="109" text-anchor="middle" font-size="22" font-weight="800" fill="#173F75">base area = ${f.base} ${u}²</text>`:`<text x="290" y="375" text-anchor="middle" font-size="23" font-weight="900" fill="#173F75">${f.l} ${u}</text><text x="471" y="128" font-size="22" font-weight="900" fill="#173F75">${f.w} ${u}</text>`}
+      <text x="105" y="246" font-size="24" font-weight="900" fill="${missing?'#B44D69':'#173F75'}">${missing?'?':f.h} ${u}</text></svg>`;
+  }
+  if(f.type==='solidPrismNet'&&I(f.l,4,10)&&I(f.w,2,7)&&I(f.h,2,8)){
+    const s=Math.min(30,390/(f.l+2*f.w),390/(2*f.w+2*f.h)),x=300-f.l*s/2,y=82,w=f.w*s,l=f.l*s,h=f.h*s,u=f.unit==='m'?'m':'cm';
+    const rect=(X,Y,W,H,fill)=>`<rect x="${X}" y="${Y}" width="${W}" height="${H}" fill="${fill}" stroke="#2593BD" stroke-width="3"/>`;
+    const folds=`<path d="M${x} ${y+w}H${x+l} M${x} ${y+w+h}H${x+l} M${x} ${y+2*w+h}H${x+l} M${x} ${y+w}V${y+w+h} M${x+l} ${y+w}V${y+w+h}" stroke="#6A9CB6" stroke-width="2.5" stroke-dasharray="8 6"/>`;
+    return `<svg class="fig net" viewBox="0 0 600 560" role="img" aria-label="Net of a rectangular prism with only three dimensions labeled: ${f.l}, ${f.w}, ${f.h} ${u}">
+      <rect x="7" y="7" width="586" height="546" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      ${rect(x,y,l,w,'#E0F4FB')}${rect(x,y+w,l,h,'#CDEBF7')}${rect(x,y+w+h,l,w,'#E0F4FB')}${rect(x,y+2*w+h,l,h,'#CDEBF7')}
+      ${rect(x-w,y+w,w,h,'#D9F0F8')}${rect(x+l,y+w,w,h,'#D9F0F8')}${folds}
+      <text x="${x+l/2}" y="${y-15}" text-anchor="middle" font-size="23" font-weight="900" fill="#173F75">${f.l} ${u}</text>
+      <text x="${x+l+20}" y="${y+w/2+7}" font-size="22" font-weight="900" fill="#173F75">${f.w} ${u}</text>
+      <text x="${x-w-12}" y="${y+w+h/2+7}" text-anchor="end" font-size="22" font-weight="900" fill="#173F75">${f.h} ${u}</text></svg>`;
+  }
+  if(f.type==='solidCubeNet'&&I(f.side,1,30)){
+    const u=f.unit==='m'?'m':'cm',s=78,x=260,y=67;
+    const rect=(X,Y)=>`<rect x="${X}" y="${Y}" width="${s}" height="${s}" fill="#D6F1FA" stroke="#2593BD" stroke-width="3"/>`;
+    return `<svg class="fig net" viewBox="0 0 600 470" role="img" aria-label="Net of a cube with six congruent squares of side ${f.side} ${u}">
+      <rect x="7" y="7" width="586" height="456" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      ${rect(x,y)}${rect(x,y+s)}${rect(x,y+2*s)}${rect(x,y+3*s)}${rect(x-s,y+s)}${rect(x+s,y+s)}
+      <path d="M${x} ${y+s}H${x+s} M${x} ${y+2*s}H${x+s} M${x} ${y+3*s}H${x+s} M${x} ${y+s}V${y+2*s} M${x+s} ${y+s}V${y+2*s}" stroke="#6A9CB6" stroke-width="2.5" stroke-dasharray="7 6"/>
+      <text x="${x+s/2}" y="${y-13}" text-anchor="middle" font-size="24" font-weight="900" fill="#173F75">${f.side} ${u}</text></svg>`;
+  }
+  if(f.type==='areaGridPolygon'&&I(f.w,5,9)&&I(f.h,5,8)&&I(f.cutW,2,7)&&I(f.cutH,2,6)&&Array.isArray(f.vertices)){
+    const U=34,ox=83,oy=340,points=f.vertices.map(p=>[ox+p[0]*U,oy-p[1]*U].join(',')).join(' ');
+    let grid='';for(let i=0;i<=f.w+1;i++)grid+=`<path d="M${ox+i*U} ${oy-(f.h+1)*U}V${oy}" stroke="#CBD9EB" stroke-width="1.4"/>`;
+    for(let i=0;i<=f.h+1;i++)grid+=`<path d="M${ox} ${oy-i*U}H${ox+(f.w+1)*U}" stroke="#CBD9EB" stroke-width="1.4"/>`;
+    return `<svg class="fig measure" viewBox="0 0 560 400" role="img" aria-label="Irregular shaded polygon on a unit square grid">
+      <rect x="7" y="7" width="546" height="386" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      ${grid}<polygon points="${points}" fill="rgba(28,133,191,.43)" stroke="#1767B2" stroke-width="4" stroke-linejoin="round"/>
+      <rect x="425" y="275" width="34" height="34" fill="#fff" stroke="#CBD9EB" stroke-width="2"/><text x="442" y="329" text-anchor="middle" font-size="15" font-weight="800" fill="#425B7A">1 unit²</text></svg>`;
+  }
+  if(f.type==='measureSquare'&&I(f.side,1,30)){
+    const u=f.question==='area'?'AREA':'PERIMETER';
+    return `<svg class="fig measure" viewBox="0 0 560 370" role="img" aria-label="Square with side length ${f.side} centimeters">
+      <rect x="7" y="7" width="546" height="356" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      <rect x="165" y="62" width="228" height="228" fill="rgba(45,135,225,.22)" stroke="#246AAF" stroke-width="4"/>
+      <path d="M165 267h23v23 M370 290v-23h23" fill="none" stroke="#E3A82D" stroke-width="3"/>
+      <text x="279" y="325" text-anchor="middle" font-size="22" font-weight="800" fill="#173F75">${f.side} cm</text>
+      <text x="133" y="181" text-anchor="middle" font-size="22" font-weight="800" fill="#173F75">${f.side} cm</text>
+      <text x="279" y="178" text-anchor="middle" font-size="20" font-weight="900" fill="#6F8EAF">${u}</text></svg>`;
+  }
+  if(f.type==='measureRectangle'&&I(f.w,1,30)&&I(f.h,1,25)){
+    const u=f.unit==='m'?'m':'cm',b=f.question==='missingLength'?'?':f.w,sideLabel=f.question==='missingWidth'?'?':f.h;
+    return `<svg class="fig measure" viewBox="0 0 600 380" role="img" aria-label="Rectangle with labeled length and width">
+      <rect x="7" y="7" width="586" height="366" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      <rect x="129" y="78" width="355" height="203" fill="rgba(45,135,225,.2)" stroke="#246AAF" stroke-width="4"/>
+      <path d="M129 258h23v23" fill="none" stroke="#E3A82D" stroke-width="3"/>
+      <text x="307" y="319" text-anchor="middle" font-size="24" font-weight="900" fill="#173F75">${b} ${u}</text>
+      <text x="96" y="185" text-anchor="middle" font-size="24" font-weight="900" fill="#173F75">${sideLabel} ${u}</text>
+      ${f.question==='missingLength'||f.question==='missingWidth'?`<text x="307" y="191" text-anchor="middle" font-size="24" font-weight="800" fill="#5C7290">Area = ${f.w*f.h} ${u}²</text>`:''}</svg>`;
+  }
+  if(f.type==='measureParallelogram'&&I(f.base,1,30)&&I(f.height,1,25)&&I(f.slant,1,8)){
+    const unit=f.unit==='m'?'m':'cm';
+    return `<svg class="fig measure" viewBox="0 0 610 380" role="img" aria-label="Parallelogram with a labeled base and perpendicular height">
+      <rect x="7" y="7" width="596" height="366" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      <path d="M115 295H446L522 86H191Z" fill="rgba(45,135,225,.22)" stroke="#246AAF" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M191 86V295" stroke="#B44D69" stroke-width="3" stroke-dasharray="9 7"/>
+      <path d="M191 275h20v20" fill="none" stroke="#B44D69" stroke-width="3"/>
+      <text x="280" y="330" text-anchor="middle" font-size="24" font-weight="900" fill="#173F75">base = ${f.base} ${unit}</text>
+      <text x="100" y="194" text-anchor="middle" font-size="23" font-weight="900" fill="#A94562">h = ${f.height} ${unit}</text>
+      </svg>`;
+  }
+  if(f.type==='angleTriangle'&&Array.isArray(f.values)&&f.values.length===3&&f.values.every(z=>I(z,1,178))&&I(f.missing,0,2)){
+    const [a,b,c]=f.values,rad=Math.PI/180,ta=Math.tan(a*rad),tb=Math.tan(b*rad),L=Math.min(340,230*(ta+tb)/(ta*tb)),left=280-L/2,right=280+L/2,h=L*ta*tb/(ta+tb),cx=left+h/ta,cy=320-h;
+    const tag=(i,x,y)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="23" font-weight="900" fill="${i===f.missing?'#B44D69':'#173F75'}">${i===f.missing?'x':f.values[i]+'°'}</text>`;
+    return `<svg class="fig angles" viewBox="0 0 560 380" role="img" aria-label="Triangle ABC with two given angles and one unknown angle">
+      <rect x="7" y="7" width="546" height="366" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      <path d="M${left} 320L${right} 320L${cx.toFixed(1)} ${cy.toFixed(1)}Z" fill="rgba(45,135,225,.17)" stroke="#246AAF" stroke-width="4" stroke-linejoin="round"/>
+      ${tag(0,left+35,300)}${tag(1,right-38,300)}${tag(2,cx,cy+48)}
+      <text x="${left-18}" y="346" font-size="21" font-weight="800" fill="#1D3A62">A</text><text x="${right+4}" y="346" font-size="21" font-weight="800" fill="#1D3A62">B</text><text x="${cx}" y="${cy-13}" text-anchor="middle" font-size="21" font-weight="800" fill="#1D3A62">C</text></svg>`;
+  }
+  if(f.type==='angleQuad'&&Array.isArray(f.values)&&f.values.length===4&&f.values.every(z=>I(z,1,178))&&I(f.missing,0,3)){
+    const labels=[[150,278],[420,275],[382,113],[177,115]];
+    const tags=f.values.map((v,i)=>`<text x="${labels[i][0]}" y="${labels[i][1]}" text-anchor="middle" font-size="22" font-weight="900" fill="${i===f.missing?'#B44D69':'#173F75'}">${i===f.missing?'x':v+'°'}</text>`).join('');
+    return `<svg class="fig angles" viewBox="0 0 560 360" role="img" aria-label="Quadrilateral ABCD with three given angles and one unknown angle">
+      <rect x="7" y="7" width="546" height="346" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      <path d="M105 305L465 300L408 72L145 77Z" fill="rgba(45,135,225,.16)" stroke="#246AAF" stroke-width="4" stroke-linejoin="round"/>
+      ${tags}<g fill="#1D3A62" font-size="21" font-weight="800"><text x="85" y="331">A</text><text x="471" y="329">B</text><text x="414" y="63">C</text><text x="126" y="64">D</text></g>
+      <text x="280" y="341" text-anchor="middle" font-size="13" fill="#64748B">Diagram not drawn to scale</text></svg>`;
+  }
+  if(f.type==='angleVertical'&&I(f.angle,40,140)){
+    const t=f.angle*Math.PI/180,Cx=280,Cy=185,r=150,dx=r*Math.cos(t),dy=r*Math.sin(t);
+    const lab=(ang,txt)=>`<text x="${Cx+72*Math.cos(ang)}" y="${Cy-72*Math.sin(ang)+7}" text-anchor="middle" font-size="26" font-weight="900" fill="${txt==='x'?'#B44D69':'#173F75'}">${txt}</text>`;
+    return `<svg class="fig angles" viewBox="0 0 560 370" role="img" aria-label="Two intersecting lines with opposite angles marked">
+      <rect x="7" y="7" width="546" height="356" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      <path d="M30 185H530 M${Cx-dx} ${Cy+dy}L${Cx+dx} ${Cy-dy}" stroke="#246AAF" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="280" cy="185" r="5" fill="#173F75"/>
+      ${lab(t/2,f.angle+'°')}${lab(t/2+Math.PI,'x')}</svg>`;
+  }
+  if(f.type==='angleParallel'&&I(f.acute,50,75)&&Array.isArray(f.pair)&&f.pair.length===2){
+    const t=f.acute*Math.PI/180,cot=1/Math.tan(t),top=280+80*cot,bot=280-80*cot;
+    const centers=[(180+f.acute)/2,f.acute/2,-(180-f.acute)/2,180+f.acute/2];
+    const tag=(i,label)=>{const x=i<4?top:bot,y=i<4?145:310,ang=centers[i%4]*Math.PI/180;return `<text x="${x+61*Math.cos(ang)}" y="${y-61*Math.sin(ang)+7}" text-anchor="middle" font-size="24" font-weight="900" fill="${label==='x'?'#B44D69':'#173F75'}">${label}</text>`;};
+    return `<svg class="fig angles" viewBox="0 0 600 460" role="img" aria-label="Two parallel lines cut by a transversal; one angle given and angle x marked">
+      <rect x="7" y="7" width="586" height="446" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      <path d="M40 145H560 M40 310H560 M${280+(220-40)*cot} 40L${280+(220-420)*cot} 420" stroke="#246AAF" stroke-width="4" stroke-linecap="round"/>
+      <path d="M69 136l11 9-11 9 M69 301l11 9-11 9" fill="none" stroke="#E0A932" stroke-width="3" stroke-linejoin="round"/>
+      <text x="545" y="132" font-size="18" font-weight="800" fill="#173F75">ℓ</text><text x="545" y="297" font-size="18" font-weight="800" fill="#173F75">m</text>
+      ${tag(f.pair[0],f.given+'°')}${tag(f.pair[1],'x')}</svg>`;
+  }
+  if(f.type==='angleParallelogram'&&I(f.acute,50,75)){
+    const sh=155/Math.tan(f.acute*Math.PI/180),givenAcute=f.given===f.acute,atGiven=givenAcute?[140,289]:[416,289],atX=f.relation==='opposite'?(givenAcute?[420+sh,135]:[140+sh,135]):(givenAcute?[415,289]:[140,289]);
+    return `<svg class="fig angles" viewBox="0 0 620 370" role="img" aria-label="Parallelogram ABCD with a given angle and angle x">
+      <rect x="7" y="7" width="606" height="356" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      <path d="M100 310H460L${460+sh} 75H${100+sh}Z" fill="rgba(45,135,225,.17)" stroke="#246AAF" stroke-width="4" stroke-linejoin="round"/>
+      <text x="${atGiven[0]}" y="${atGiven[1]}" font-size="22" font-weight="900" fill="#173F75">${f.given}°</text>
+      <text x="${atX[0]}" y="${atX[1]}" font-size="25" font-weight="900" fill="#B44D69">x</text>
+      <g fill="#1D3A62" font-size="20" font-weight="800"><text x="76" y="339">A</text><text x="461" y="339">B</text><text x="${465+sh}" y="67">C</text><text x="${80+sh}" y="67">D</text></g></svg>`;
+  }
+  if(f.type==='angleIsosceles'&&I(f.vertex,1,150)&&I(f.base,1,89)){
+    const t=f.base*Math.PI/180,half=Math.min(155,220/Math.tan(t)),h=half*Math.tan(t),lx=280-half,rx=280+half,top=315-h;
+    const vertexLabel=f.missing==='vertex'?'x':f.vertex+'°',baseLabel=f.missing==='base'?'x':f.base+'°';
+    return `<svg class="fig angles" viewBox="0 0 560 380" role="img" aria-label="Isosceles triangle with equal side marks and a missing angle">
+      <rect x="7" y="7" width="546" height="366" rx="22" fill="#F8FAFF" stroke="#CFDCEC" stroke-width="2"/>
+      <path d="M${lx} 315L${rx} 315L280 ${top}Z" fill="rgba(45,135,225,.16)" stroke="#246AAF" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M${(lx+280)/2-8} ${(315+top)/2-5}l16 10 M${(rx+280)/2-8} ${(315+top)/2+5}l16-10" stroke="#E0A932" stroke-width="5" stroke-linecap="round"/>
+      <text x="280" y="${top+45}" text-anchor="middle" font-size="25" font-weight="900" fill="${f.missing==='vertex'?'#B44D69':'#173F75'}">${vertexLabel}</text>
+      <text x="${lx+42}" y="294" text-anchor="middle" font-size="24" font-weight="900" fill="${f.missing==='base'?'#B44D69':'#173F75'}">${baseLabel}</text>
+      <text x="${rx-42}" y="294" text-anchor="middle" font-size="24" font-weight="900" fill="#173F75">${f.base}°</text>
+      <g fill="#1D3A62" font-size="20" font-weight="800"><text x="${lx-23}" y="340">A</text><text x="${rx+8}" y="340">B</text><text x="271" y="${top-13}">C</text></g></svg>`;
+  }
+  if(f.type==='transformPlane'&&Array.isArray(f.originals)&&Array.isArray(f.images)&&f.originals.length<=3&&f.images.length<=3&&[...f.originals,...f.images].every(p=>Array.isArray(p)&&p.length===2&&p.every(z=>I(z,-8,8)))){
+    const C=270,U=27,xy=p=>[C+p[0]*U,C-p[1]*U],names=['A','B','C'];
+    let grid='';for(let i=-8;i<=8;i++){
+      const z=C+i*U;
+      grid+=`<path d="M${z} 42V498 M42 ${z}H498" stroke="${i===0?'#617CA1':'#DCE6F4'}" stroke-width="${i===0?2.7:1}"/>`;
+      if(i!==0)grid+=`<text x="${z}" y="284" text-anchor="middle" font-size="11" fill="#5E7090">${i}</text><text x="259" y="${C-i*U-5}" text-anchor="end" font-size="11" fill="#5E7090">${i}</text>`;
+    }
+    const shape=(arr,color,fill)=>arr.length>2?`<polygon points="${arr.map(p=>xy(p).join(',')).join(' ')}" fill="${fill}" stroke="${color}" stroke-width="3.5" stroke-linejoin="round"/>`:'';
+    const dots=(arr,color,prime)=>arr.map((p,i)=>{const [x,y]=xy(p);return `<circle cx="${x}" cy="${y}" r="7.5" fill="${color}" stroke="#fff" stroke-width="2.5"/><text x="${x+10}" y="${y-12}" font-size="18" font-weight="900" fill="${color}" stroke="#fff" stroke-width="3" paint-order="stroke">${names[i]}${prime?'′':''}</text>`}).join('');
+    let guide='';
+    if(f.guide==='reflection'){
+      let line='';const k=I(f.k,-3,3)?f.k:0;
+      if(f.axis==='x'||f.axis==='horizontal'){const y=C-(f.axis==='x'?0:k)*U;line=`M42 ${y}H498`;}
+      else if(f.axis==='y'||f.axis==='vertical'){const x=C+(f.axis==='y'?0:k)*U;line=`M${x} 42V498`;}
+      else if(f.axis==='diagonal')line='M42 498L498 42';
+      guide=`<path d="${line}" stroke="#B64EB3" stroke-width="3" stroke-dasharray="10 7" opacity=".8"/>`;
+    }
+    if(f.guide==='rotation'&&f.originals.length&&f.images.length){
+      const a=xy(f.originals[0]),b=xy(f.images[0]);guide=`<path d="M270 270L${a.join(' ')} M270 270L${b.join(' ')}" fill="none" stroke="#7B93B9" stroke-width="2" stroke-dasharray="6 6" opacity=".65"/>`;
+    }
+    if(f.guide==='translation'&&f.originals.length&&f.images.length){
+      guide=f.originals.map((p,i)=>{if(!f.images[i])return '';const a=xy(p),b=xy(f.images[i]);return `<path d="M${a.join(' ')}L${b.join(' ')}" stroke="#658BBA" stroke-width="2" stroke-dasharray="5 6" marker-end="url(#deltaArrow)" opacity=".6"/>`}).join('');
+    }
+    if(Array.isArray(f.vector)&&f.vector.length===2&&f.vector.every(z=>I(z,-4,4))){
+      const a=xy([-3,-4]),b=xy([-3+f.vector[0],-4+f.vector[1]]);
+      guide+=`<path d="M${a.join(' ')}L${b.join(' ')}" stroke="#B67E20" stroke-width="3" marker-end="url(#deltaArrow)"/><text x="${a[0]+10}" y="${a[1]-12}" fill="#86590C" font-size="19" font-style="italic">v</text><path d="M${a[0]+8} ${a[1]-28}h14m-4-3 4 3-4 3" fill="none" stroke="#86590C" stroke-width="1.7"/>`;
+    }
+    return `<svg class="fig transform" viewBox="0 0 540 540" role="img" aria-label="Coordinate plane with original and image points">
+      <defs><marker id="deltaArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#658BBA"/></marker></defs>
+      <rect x="12" y="12" width="516" height="516" rx="22" fill="#FAFCFF" stroke="#CEDBEB" stroke-width="2"/>
+      ${grid}${guide}${shape(f.originals,'#1767B2','rgba(45,135,225,.25)')}${shape(f.images,'#D38A1A','rgba(245,174,45,.32)')}
+      ${dots(f.originals,'#1767B2',false)}${dots(f.images,'#B87212',true)}
+      <circle cx="270" cy="270" r="3" fill="#203E64"/><text x="278" y="263" font-size="14" font-weight="800" fill="#203E64">O</text>
+      <text x="508" y="264" font-size="19" font-weight="800" fill="#203E64">x</text><text x="277" y="39" font-size="19" font-weight="800" fill="#203E64">y</text>
+    </svg>`;
+  }
+  if(f.type==='coordinatePoint'&&I(f.x,1,8)&&I(f.y,1,8)){
+    const o=42,step=29,X=o+f.x*step,Y=o+(9-f.y)*step;
+    let grid='';for(let i=0;i<=9;i++){
+      const p=o+i*step;
+      grid+=`<path d="M${p} 42V303 M42 ${p}H303" stroke="#DCE5F2" stroke-width="1.5"/>`;
+      if(i>0)grid+=`<text x="${p}" y="325" text-anchor="middle" font-size="13" fill="#354768">${i}</text><text x="29" y="${303-i*step+5}" text-anchor="end" font-size="13" fill="#354768">${i}</text>`;
+    }
+    return `<svg class="fig coord" viewBox="0 0 350 345" role="img" aria-label="First quadrant coordinate grid with point P">
+      <rect x="8" y="8" width="334" height="330" rx="24" fill="#F8FAFF" stroke="#CBD8EB" stroke-width="2"/>
+      ${grid}<path d="M42 303H317 M42 303V27" stroke="#19375F" stroke-width="3"/>
+      <path d="M317 303l-9-5v10z M42 27l-5 9h10z" fill="#19375F"/>
+      <text x="323" y="308" font-size="18" font-weight="bold" fill="#19375F">x</text><text x="37" y="23" font-size="18" font-weight="bold" fill="#19375F">y</text>
+      <path d="M${X} ${Y}V303 M${X} ${Y}H42" stroke="#E2AD30" stroke-width="2" stroke-dasharray="5 5"/>
+      <circle cx="${X}" cy="${Y}" r="10" fill="#155AAB" stroke="#fff" stroke-width="3"/>
+      <text x="${X+14}" y="${Y-12}" font-size="20" font-weight="900" fill="#123D73">P</text></svg>`;
+  }
+  if(f.type==='balanceScale'&&I(f.a,2,3)&&I(f.b,1,4)&&I(f.c,5,25)){
+    let left='';for(let i=0;i<f.a;i++)left+=`<rect x="${88+i*58}" y="165" width="48" height="44" rx="9" fill="#4D95E8" stroke="#1E5FAB" stroke-width="3"/><text x="${112+i*58}" y="194" text-anchor="middle" font-size="23" font-weight="800" fill="#fff">x</text>`;
+    for(let i=0;i<f.b;i++)left+=`<rect x="${84+i*33}" y="219" width="27" height="25" rx="5" fill="#FFD35A" stroke="#B98714" stroke-width="2"/><text x="${97+i*33}" y="237" text-anchor="middle" font-size="15" font-weight="800" fill="#503B11">1</text>`;
+    return `<svg class="fig balance" viewBox="0 0 720 300" role="img" aria-label="Balanced scale with ${f.a} x blocks and ${f.b} one-unit blocks on the left, and ${f.c} units on the right">
+      <defs><linearGradient id="beam" x2="0" y2="1"><stop stop-color="#8DB0D8"/><stop offset="1" stop-color="#35557D"/></linearGradient></defs>
+      <rect x="4" y="4" width="712" height="292" rx="26" fill="#F7FAFF" stroke="#D2E0F0" stroke-width="3"/>
+      <circle cx="360" cy="77" r="17" fill="#FFD35A" stroke="#AB821E" stroke-width="4"/>
+      <rect x="65" y="65" width="590" height="18" rx="9" fill="url(#beam)"/>
+      <path d="M360 92L330 267H390Z" fill="#264B79"/><rect x="272" y="266" width="176" height="17" rx="8" fill="#19375F"/>
+      <path d="M90 83V213 M290 83V213 M430 83V213 M630 83V213" stroke="#6886A9" stroke-width="4"/>
+      <path d="M66 247H314L290 214H90Z M406 247H654L630 214H430Z" fill="#DDEBFA" stroke="#35618C" stroke-width="4"/>
+      ${left}<rect x="476" y="167" width="108" height="69" rx="14" fill="#1F8A7A" stroke="#116154" stroke-width="4"/>
+      <text x="530" y="212" text-anchor="middle" font-size="31" font-weight="900" fill="#fff">${f.c}</text>
+      <text x="360" y="45" text-anchor="middle" font-size="18" font-weight="800" fill="#304E74">BALANCED</text></svg>`;
+  }
+  if(f.type==='circle'&&I(f.n,2,30)){
+    let p='';for(let i=0;i<f.n;i++){const a0=-Math.PI/2+2*Math.PI*i/f.n,a1=-Math.PI/2+2*Math.PI*(i+1)/f.n;
+      const x0=(100+90*Math.cos(a0)).toFixed(2),y0=(100+90*Math.sin(a0)).toFixed(2),x1=(100+90*Math.cos(a1)).toFixed(2),y1=(100+90*Math.sin(a1)).toFixed(2);
+      p+=`<path d="M100 100 L${x0} ${y0} A90 90 0 ${f.n===1?1:0} 1 ${x1} ${y1} Z" fill="${fill(i)}" ${st}/>`;}
+    return `<svg class="fig" viewBox="0 0 200 200" role="img" aria-label="Circle divided into ${f.n} parts, ${S.size} shaded">${p}</svg>`;
+  }
+  if(f.type==='strip'&&I(f.n,2,30)){
+    const W=600,cw=W/f.n;let p='';for(let i=0;i<f.n;i++)p+=`<rect x="${(2+i*cw).toFixed(2)}" y="2" width="${cw.toFixed(2)}" height="70" fill="${fill(i)}" ${st}/>`;
+    return `<svg class="fig strip" viewBox="0 0 604 74" role="img" aria-label="Tira dividida en ${f.n} partes, ${S.size} sombreadas">${p}</svg>`;
+  }
+  if(f.type==='grid'&&I(f.r,1,10)&&I(f.c,1,10)){
+    const cs=24;let p='';for(let i=0;i<f.r*f.c;i++){const x=2+(i%f.c)*cs,y=2+Math.floor(i/f.c)*cs;p+=`<rect x="${x}" y="${y}" width="${cs}" height="${cs}" fill="${fill(i)}" ${st}/>`;}
+    return `<svg class="fig" viewBox="0 0 ${f.c*cs+4} ${f.r*cs+4}" role="img" aria-label="Grid with ${f.r*f.c} parts, ${S.size} shaded">${p}</svg>`;
+  }
+  return '';
+}
+/*GEN-END*/
+
+function parseCustom(txt){
+  const qs=[];
+  txt.split(/\r?\n/).forEach(line=>{
+    const parts=line.split('|').map(s=>s.trim()).filter(Boolean);
+    if(parts.length<3) return;
+    const opts=parts.slice(1,5);
+    const order=shuffle(opts.map((_,i)=>i));
+    qs.push({text:parts[0],choices:order.map(i=>opts[i]),correct:order.indexOf(0),custom:true});
+  });
+  return qs;
+}
+
+/* =====================================================================
+   SONIDO — generado con Web Audio (no necesita archivos de audio)
+   ===================================================================== */
+const SFX=(()=>{
+  const KEY='retodelta.sound';
+  const VOL=2.2;   // volumen general: súbelo o bájalo aquí (antes era 0.55)
+  let ctx=null, master=null, noise=null, loop=null;
+  let on=true; try{ const v=localStorage.getItem(KEY); if(v!==null) on=v==='1'; }catch(e){}
+  function unlock(){
+    if(!ctx){
+      const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+      ctx=new AC(); master=ctx.createGain(); master.gain.value=on?VOL:0;
+      const comp=ctx.createDynamicsCompressor(); comp.threshold.value=-12; comp.knee.value=6; comp.ratio.value=4; comp.attack.value=0.003; comp.release.value=0.15;
+      master.connect(comp); comp.connect(ctx.destination);
+      noise=ctx.createBuffer(1,ctx.sampleRate*0.2,ctx.sampleRate);
+      const d=noise.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    }
+    if(ctx.state==='suspended') ctx.resume();
+  }
+  function tone(f,at,dur,{type='triangle',vol=.25,slide=0}={}){
+    if(!ctx) return; const t=Math.max(at,ctx.currentTime);
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t); if(slide) o.frequency.exponentialRampToValueAtTime(f*slide,t+dur);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(vol,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.05);
+  }
+  function hat(at,vol=.05){
+    if(!ctx) return; const s=ctx.createBufferSource(), f=ctx.createBiquadFilter(), g=ctx.createGain();
+    s.buffer=noise; f.type='highpass'; f.frequency.value=7000;
+    g.gain.setValueAtTime(vol,at); g.gain.exponentialRampToValueAtTime(0.0001,at+0.05);
+    s.connect(f); f.connect(g); g.connect(master); s.start(at); s.stop(at+0.06);
+  }
+  const seq=(notes,step,opt)=>{ if(!ctx) return; const t=ctx.currentTime+0.02; notes.forEach((f,i)=>f&&tone(f,t+i*step,step*1.8,opt)); };
+  const FX={
+    join:   ()=>seq([784,1175],.07,{vol:.18}),
+    go:     ()=>seq([523,784],.08,{vol:.2}),
+    tap:    ()=>seq([660],.05,{vol:.15}),
+    tick:   ()=>ctx&&tone(1046,ctx.currentTime,.07,{type:'square',vol:.07}),
+    timeup: ()=>ctx&&tone(392,ctx.currentTime,.5,{type:'sawtooth',vol:.12,slide:.5}),
+    reveal: ()=>seq([523,659,784,1047],.07,{vol:.2}),
+    correct:()=>seq([659,831,988,1319],.075,{vol:.22}),
+    wrong:  ()=>{ if(!ctx) return; tone(233,ctx.currentTime,.25,{type:'sawtooth',vol:.1}); tone(185,ctx.currentTime+.22,.45,{type:'sawtooth',vol:.1,slide:.85}); },
+    board:  ()=>seq([392,523,659],.09,{vol:.18}),
+    end:    ()=>seq([523,659,784,1047,0,784,1047],.12,{vol:.22}),
+    podium: ()=>{ if(!ctx) return; const t=ctx.currentTime;
+      for(let i=0;i<16;i++) hat(t+i*0.075,.03+i*0.004);           // redoble mientras suben los bloques
+      [[523,1.25],[659,1.4],[784,1.55],[1047,1.75]].forEach(([f,d])=>tone(f,t+d,d>1.7?1.1:.3,{vol:.24}));
+      [[262,1.75],[330,1.75],[392,1.75]].forEach(([f,d])=>tone(f,t+d,1.2,{type:'sine',vol:.12})); }
+  };
+  // Música: bucle generado (Am–F–C–G). 'lobby' tranquilo, 'question' con más energía.
+  const CH=[[110,[220,262,330]],[87.3,[175,220,262]],[130.8,[262,330,392]],[98,[196,247,294]]];
+  function music(mode){
+    stopMusic(); if(!ctx) return;
+    const bpm=mode==='question'?138:104, step=60/bpm/2; let n=0, next=ctx.currentTime+0.05;
+    loop=setInterval(()=>{
+      while(next<ctx.currentTime+0.25){
+        const [root,arp]=CH[Math.floor(n/8)%4], s=n%8;
+        if(s===0||s===3||s===4||s===6) tone(root,next,step*1.6,{type:'triangle',vol:mode==='question'?.16:.1});
+        tone(arp[[0,1,2,1,0,2,1,2][s]]*2,next,step*.9,{type:'sine',vol:mode==='question'?.06:.04});
+        if(mode==='question'&&s%2===1) hat(next,.035);
+        next+=step; n++;
+      }
+    },60);
+  }
+  function stopMusic(){ clearInterval(loop); loop=null; }
+  function toggle(){ on=!on; try{localStorage.setItem(KEY,on?'1':'0');}catch(e){} unlock(); if(master) master.gain.setTargetAtTime(on?VOL:0,ctx.currentTime,0.03); paintBtn(); }
+  function paintBtn(){ const b=document.getElementById('snd'); if(!b) return;
+    b.innerHTML=on?'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+                  :'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    b.setAttribute('aria-label',on?'Silenciar sonido':'Activar sonido'); b.setAttribute('aria-pressed',String(!on)); }
+  return { unlock, play:k=>{ unlock(); FX[k]&&FX[k](); }, music:m=>{ unlock(); music(m); }, stopMusic, toggle, paintBtn };
+})();
+document.addEventListener('pointerdown',()=>SFX.unlock(),{once:true});
+
+/* =====================================================================
+   HOST (teacher)
+   ===================================================================== */
+const H={game:null,quiz:[],limit:20,players:new Map(),answers:[],stats:[],q:-1,phase:'setup',tick:null,start:0,unsub:[]};
+
+function hostSetup(){
+  const tk=Object.keys(TOPICS);
+  const chips=[...tk.map(k=>[k,TOPICS[k].name]),...(tk.length>1?[['mixto','Mixed']]:[]),['custom','My questions']]
+    .map(([k,n],i)=>`<label class="chip"><input type="radio" name="topic" value="${k}" ${i===0?'checked':''}><span>${n}</span></label>`).join('');
+  view(`
+  <main class="setup">
+    <div class="left">
+      <div class="word disp"><span class="mark">${DELTA}NUMBLITZ</span><small>MATHEMATICS</small><span class="by">${esc(TEACHER)}</span></div>
+      <p class="lede">Project each question while students answer on their phones. Correct, faster answers earn more points.</p>
+      ${LOCAL?`<p class="mode">Test mode: Supabase is not connected. Open this file in another tab of the same browser to join as a student.</p>`:''}
+    </div>
+    <section class="panel" aria-labelledby="st">
+      <h2 id="st">Create a challenge</h2>
+      <div class="field"><label>Topic</label><div class="chips" role="radiogroup">${chips}</div></div>
+      <div class="field hidden" id="customBox">
+        <label for="custom">Your questions, one per line</label>
+        <textarea id="custom" placeholder="What is \\(3^2 + 4\\)? | 13 | 10 | 12 | 49"></textarea>
+        <p class="help">Format: <code>question | correct answer | wrong answer | wrong answer | wrong answer</code>. The first answer must be correct; the game shuffles the choices. Put math between <code>\\(</code> and <code>\\)</code>.</p>
+      </div>
+      <div class="row2">
+        <div class="field" id="countBox"><label for="count">Questions</label>
+          <select id="count"><option>5</option><option selected>10</option><option>15</option><option>20</option></select></div>
+        <div class="field"><label for="limit">Time per question</label>
+          <select id="limit"><option value="10">10 seconds</option><option value="20" selected>20 seconds</option><option value="30">30 seconds</option><option value="60">60 seconds</option></select></div>
+      </div>
+      <p class="err" id="err" role="alert"></p>
+      <button class="btn block" id="create">Create game</button>
+    </section>
+  </main>`);
+  document.querySelectorAll('input[name=topic]').forEach(r=>r.addEventListener('change',()=>{
+    const c=r.value==='custom'&&r.checked; $('#customBox').classList.toggle('hidden',!c); $('#countBox').classList.toggle('hidden',c);
+  }));
+  try{ const saved=localStorage.getItem('retodelta.custom'); if(saved) $('#custom').value=saved; }catch(e){}
+  { const c=document.querySelector('input[name=topic]:checked').value==='custom'; $('#customBox').classList.toggle('hidden',!c); $('#countBox').classList.toggle('hidden',c); }
+  $('#create').onclick=hostCreate;
+}
+
+async function hostCreate(){
+  const topic=document.querySelector('input[name=topic]:checked').value;
+  const count=+$('#count').value; H.limit=+$('#limit').value;
+  if(topic==='custom'){ try{localStorage.setItem('retodelta.custom',$('#custom').value);}catch(e){} }
+  const quiz=topic==='custom'?parseCustom($('#custom').value):makeQuiz(topic,count);
+  if(!quiz.length){ $('#err').textContent='Enter at least one question using: question | correct answer | wrong answer.'; return; }
+  SFX.unlock(); $('#create').disabled=true; $('#err').textContent='';
+  try{
+    if(LOCAL) db.reset();
+    let code;
+    for(let i=0;i<8;i++){ code=String(R(100000,999999)); if(!(await db.activeGameByCode(code))) break; }
+    const title=topic==='custom'?'My questions':topic==='mixto'?'Mixed':TOPICS[topic].name;
+    H.game=await db.insert('games',{code,status:'lobby',q_index:-1,q_total:quiz.length,title});
+    H.quiz=quiz; H.players=new Map(); H.answers=quiz.map(()=>new Map()); H.stats=quiz.map(()=>({correct:0,answered:0})); H.q=-1; H.phase='lobby';
+    H.unsub.forEach(u=>u()); H.unsub=[
+      db.watch('players','INSERT','game_id',H.game.id,addPlayer),
+      db.watch('answers','INSERT','game_id',H.game.id,onAnswer)
+    ];
+    hostLobby();
+  }catch(e){
+    console.error(e); $('#create').disabled=false;
+    $('#err').textContent='Could not create the game. Check your Supabase connection and setup.';
+  }
+}
+
+function addPlayer(p){
+  if(H.players.has(p.id)) return;
+  H.players.set(p.id,{id:p.id,game_id:p.game_id,nickname:p.nickname,score:0,streak:0,last_points:0,rank:null,hist:[]});
+  SFX.play('join');
+  if(H.phase==='lobby') renderRoster(); else updateAnswered();
+}
+function onAnswer(a){
+  if(H.phase!=='question'||a.q_index!==H.q||!H.players.has(a.player_id)) return;
+  const m=H.answers[H.q]; if(m.has(a.player_id)) return;
+  m.set(a.player_id,{choice:a.choice,ms:a.elapsed_ms});
+  updateAnswered();
+  if(m.size>=H.players.size) hostReveal();
+}
+
+function joinURL(){ return location.origin+location.pathname; }
+function hostLobby(){
+  const url=joinURL();
+  view(`
+  <header class="hbar"><span class="mark">${DELTA}<span class="bt">NUMBLITZ<small>${esc(TEACHER)}</small></span></span><span class="meta">${esc(H.game.title)} · ${H.quiz.length} questions · ${H.limit} s</span></header>
+  <main class="lobby">
+    <section class="joinbox">
+      <span class="lbl">Go to</span>
+      <span class="url">${esc(url.replace(/^https?:\/\//,''))}</span>
+      <span class="lbl">and enter this code</span>
+      <span class="codebig" aria-label="Code ${H.game.code.split('').join(' ')}">${H.game.code}</span>
+      <div id="qr" aria-label="QR code to join"></div>
+    </section>
+    <section class="roster">
+      <h2><b id="pc">0</b> <span id="pl">students connected</span></h2>
+      <div class="names" id="names"></div>
+    </section>
+  </main>
+  <footer class="hfoot"><button class="btn ghost" id="cancel">Cancel</button><button class="btn" id="start" disabled>Start challenge</button></footer>`);
+  const qr=()=>{ if(window.QRCode) new QRCode($('#qr'),{text:url+'?code='+H.game.code,width:170,height:170,colorDark:'#1B2A4A',colorLight:'#ffffff'}); else $('#qr').remove(); };
+  document.readyState==='complete'?qr():window.addEventListener('load',qr,{once:true});
+  $('#start').onclick=async()=>{
+    // reconcile anyone we missed while the realtime channel was opening
+    try{ (await db.list('players','game_id',H.game.id)).forEach(addPlayer); }catch(e){}
+    if(H.players.size) hostQuestion(0);
+  };
+  $('#cancel').onclick=async()=>{ try{await db.update('games',H.game.id,{status:'ended'});}catch(e){} SFX.stopMusic(); H.phase='setup'; hostSetup(); };
+  SFX.music('lobby');
+  renderRoster();
+  db.list('players','game_id',H.game.id).then(l=>l.forEach(addPlayer)).catch(()=>{});
+}
+function renderRoster(){
+  const box=$('#names'); if(!box) return;
+  const list=[...H.players.values()];
+  $('#pc').textContent=list.length; $('#pl').textContent=list.length===1?'student connected':'students connected';
+  $('#start').disabled=!list.length;
+  box.innerHTML=list.length?list.map(p=>`<span class="name">${esc(p.nickname)}<button data-kick="${p.id}" aria-label="Remove ${esc(p.nickname)}" title="Remove">×</button></span>`).join('')
+    :'<p class="empty">Waiting for students to join…</p>';
+  box.querySelectorAll('[data-kick]').forEach(b=>b.onclick=()=>{ const id=b.dataset.kick; H.players.delete(id); db.remove('players',id).catch(()=>{}); renderRoster(); });
+}
+
+function tilesHTML(q,cls){
+  return q.choices.map((c,i)=>`<div class="${cls} c${i}" data-i="${i}"><span class="shp" aria-label="${SHAPE_NAMES[i]}">${SHAPES[i]}</span><span class="txt">${esc(c)}</span>${cls==='htile'?`${CHECK}<span class="cnt">0</span>`:''}</div>`).join('');
+}
+async function hostQuestion(i){
+  H.q=i; H.phase='question'; const q=H.quiz[i];
+  view(`
+  <header class="hbar"><span class="mark">${DELTA}<span class="bt">NUMBLITZ<small>${esc(TEACHER)}</small></span></span><span class="meta">Question ${i+1} of ${H.quiz.length}</span>
+    <div class="answered"><b id="ans">0</b><span id="ansl">of ${H.players.size} answered</span></div></header>
+  <main class="hq">
+    <div class="stage">
+      <div class="qtext">${esc(q.text)}${q.fig?`<div class="qfig">${renderFig(q.fig)}</div>`:''}</div>
+      <div class="timer" id="timer" role="timer"><svg viewBox="0 0 120 108"><path class="bg" d="M60 6 L114 100 H6 Z"/><path class="fg" id="tfg" pathLength="100" d="M60 6 L114 100 H6 Z"/></svg><span id="tnum">${H.limit}</span></div>
+    </div>
+    <div class="htiles" id="tiles">${tilesHTML(q,'htile')}</div>
+  </main>
+  <footer class="hfoot"><button class="btn ghost" id="skip">Close question</button></footer>`);
+  $('#skip').onclick=hostReveal;
+  try{
+    await db.update('games',H.game.id,{status:'question',q_index:i,reveal:null,
+      current:{index:i,text:q.text,choices:q.choices,limit:H.limit,fig:q.fig||null}});
+  }catch(e){ console.error(e); }
+  H.start=performance.now(); clearInterval(H.tick); SFX.music('question'); let lastSec=H.limit;
+  H.tick=setInterval(()=>{
+    const left=Math.max(0,H.limit-(performance.now()-H.start)/1000);
+    const fg=$('#tfg'); if(!fg) return;
+    fg.style.strokeDashoffset=100*(1-left/H.limit);
+    const sec=Math.ceil(left); $('#tnum').textContent=sec;
+    if(sec!==lastSec){ lastSec=sec; if(sec<=5&&sec>0) SFX.play('tick'); }
+    $('#timer').classList.toggle('low',left<=5);
+    if(left<=0){ SFX.play('timeup'); hostReveal(); }
+  },100);
+}
+function updateAnswered(){ const a=$('#ans'); if(!a||H.q<0) return; a.textContent=H.answers[H.q].size; $('#ansl').textContent=`of ${H.players.size} answered`; }
+
+async function hostReveal(){
+  if(H.phase!=='question') return;
+  H.phase='revealing'; clearInterval(H.tick); SFX.stopMusic(); SFX.play('reveal');
+  const i=H.q, q=H.quiz[i], m=H.answers[i], limitMs=H.limit*1000;
+  try{ (await db.list('answers','game_id',H.game.id)).forEach(a=>{
+    if(a.q_index===i&&H.players.has(a.player_id)&&!m.has(a.player_id)) m.set(a.player_id,{choice:a.choice,ms:a.elapsed_ms}); }); }catch(e){}
+  const counts=q.choices.map(()=>0); let right=0;
+  H.players.forEach(p=>{
+    const a=m.get(p.id); let pts=0;
+    if(a){ counts[a.choice]=(counts[a.choice]||0)+1; }
+    if(a&&a.choice===q.correct){
+      right++; p.streak++;
+      pts=Math.round(1000*(1-0.5*Math.min(a.ms,limitMs)/limitMs))+Math.min(p.streak-1,3)*100;
+      p.hist[i]=1;
+    } else { p.streak=0; p.hist[i]=a?0:null; }
+    p.score+=pts; p.last_points=pts; p.last_correct=!!(a&&a.choice===q.correct);
+  });
+  H.stats[i]={correct:right,answered:m.size};
+  const arr=[...H.players.values()];
+  arr.forEach(p=>{ p.rank=1+arr.filter(o=>o.score>p.score).length; });
+  try{
+    await db.upsert('players',arr.map(p=>({id:p.id,game_id:p.game_id,nickname:p.nickname,score:p.score,last_points:p.last_points,streak:p.streak,rank:p.rank,last_correct:p.last_correct})));
+    await db.update('games',H.game.id,{status:'reveal',reveal:{correct:q.correct,counts}});
+  }catch(e){ console.error(e); }
+  H.phase='reveal';
+  const tiles=$('#tiles'); if(!tiles) return;
+  tiles.classList.add('rev');
+  tiles.querySelectorAll('.htile').forEach(t=>{ const k=+t.dataset.i; t.classList.add(k===q.correct?'right':'dim'); t.querySelector('.cnt').textContent=counts[k]; });
+  $('#tnum').textContent='0'; $('#tfg').style.strokeDashoffset=100;
+  const f=document.querySelector('.hfoot'); f.innerHTML=`<button class="btn" id="nx">View standings</button>`; $('#nx').onclick=hostBoard;
+}
+
+function sorted(){ return [...H.players.values()].sort((a,b)=>b.score-a.score||a.nickname.localeCompare(b.nickname)); }
+async function hostBoard(){
+  SFX.play('board');
+  H.phase='board'; const top=sorted().slice(0,5); const last=H.q>=H.quiz.length-1;
+  try{ await db.update('games',H.game.id,{status:'leaderboard',board:top.map(p=>({nickname:p.nickname,score:p.score}))}); }catch(e){}
+  view(`
+  <header class="hbar"><span class="mark">${DELTA}<span class="bt">NUMBLITZ<small>${esc(TEACHER)}</small></span></span><span class="meta">After question ${H.q+1} de ${H.quiz.length}</span></header>
+  <main class="board">
+    <h2>Standings</h2>
+    <ol class="ranks">${top.map(p=>`<li><span class="pos">${p.rank}</span><span class="nm">${esc(p.nickname)}</span><span class="gain">${p.last_points?'+'+fmtPts(p.last_points):''}</span><span class="pts">${fmtPts(p.score)}</span></li>`).join('')||'<li><span class="nm">No players</span></li>'}</ol>
+  </main>
+  <footer class="hfoot"><button class="btn" id="nx">${last?'View podium':'Next question'}</button></footer>`);
+  $('#nx').onclick=()=>last?hostEnd():hostQuestion(H.q+1);
+}
+
+async function hostEnd(){
+  H.phase='ended'; clearInterval(H.tick); SFX.stopMusic(); SFX.play('podium');
+  const all=sorted();
+  try{ await db.update('games',H.game.id,{status:'ended',board:all.slice(0,10).map(p=>({nickname:p.nickname,score:p.score}))}); }catch(e){}
+  const pod=[all[1],all[0],all[2]].map((p,k)=>{ const place=[2,1,3][k]; return p?`<div class="pod p${place}"><span class="nm">${esc(p.nickname)}</span><span class="pts">${fmtPts(p.score)}</span><div class="blk">${place}</div></div>`:'<div class="pod"></div>'; }).join('');
+  const hard=H.stats.map((s,i)=>({i,pct:s.answered?Math.round(100*s.correct/Math.max(H.players.size,1)):0,asked:i<=H.q}))
+    .filter(x=>x.asked).sort((a,b)=>a.pct-b.pct).slice(0,3);
+  view(`
+  <header class="hbar"><span class="mark">${DELTA}<span class="bt">NUMBLITZ<small>${esc(TEACHER)}</small></span></span><span class="meta">${esc(H.game.title)} · code ${H.game.code}</span></header>
+  <main class="board">
+    <h2>Podium</h2>
+    <div class="podium">${pod}</div>
+    <section class="summary">
+      <h3>Questions with the fewest correct answers</h3>
+      <ul class="hard">${hard.map(h=>`<li><b>${h.pct}%</b><span>P${h.i+1}. ${esc(H.quiz[h.i].text)}</span></li>`).join('')}</ul>
+    </section>
+    <div class="actions"><button class="btn" id="csv">Download results (CSV)</button><button class="btn ghost" id="again">Create another challenge</button></div>
+  </main>`);
+  $('#csv').onclick=downloadCSV;
+  $('#again').onclick=()=>{ H.unsub.forEach(u=>u()); H.unsub=[]; SFX.stopMusic(); H.phase='setup'; hostSetup(); };
+}
+function downloadCSV(){
+  const rows=sorted(), n=H.quiz.length, q=s=>`"${String(s).replace(/"/g,'""')}"`;
+  const lines=[['Rank','Name','Points','Correct',...H.quiz.map((_,i)=>'P'+(i+1))].join(';')];
+  rows.forEach(p=>{ const h=[...Array(n)].map((_,i)=>p.hist[i]==null?'':p.hist[i]);
+    lines.push([p.rank,q(p.nickname),p.score,h.filter(v=>v===1).length,...h].join(';')); });
+  lines.push('',['Question','% correct','Text'].join(';'));
+  H.quiz.forEach((x,i)=>{ const s=H.stats[i]; lines.push([i+1,H.players.size?Math.round(100*s.correct/H.players.size):0,q(x.text)].join(';')); });
+  const blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`numblitz-${H.game.code}.csv`; a.click();
+}
+window.addEventListener('beforeunload',e=>{ if(['question','revealing','reveal','board','lobby'].includes(H.phase)){ e.preventDefault(); e.returnValue=''; } });
+
+/* =====================================================================
+   STUDENT (estudiante)
+   ===================================================================== */
+const S={game:null,player:null,unsub:null,idx:-1,shownAt:0,mine:{},tick:null};
+const SESSION='retodelta.session';
+
+function playerJoin(prefill=''){
+  clearInterval(S.tick);
+  view(`
+  <main class="join">
+    <svg class="bgdelta" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 4 L96 92 H4 Z"/><path d="M50 22 L81 82 H19 Z"/><path d="M50 40 L66 72 H34 Z"/></svg>
+    <form class="join-card" id="jf" novalidate>
+      <div class="word disp"><span class="mark">${DELTA}NUMBLITZ</span><small>MATHEMATICS</small><span class="by">${esc(TEACHER)}</span></div>
+      <div class="field"><label for="code">Game code</label>
+        <input id="code" class="code-in" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="000000" value="${esc(prefill)}"></div>
+      <div class="field"><label for="nick">Your name</label>
+        <input id="nick" maxlength="32" autocomplete="off" placeholder="First and last name" style="text-transform:uppercase" oninput="this.value=this.value.toLocaleUpperCase()"></div>
+      <p class="err" id="err" role="alert"></p>
+      <button class="btn block" id="go" type="submit">Join</button>
+      ${LOCAL?`<p class="mode">Test mode works only across tabs in this browser.</p>`:''}
+      <p class="foot-note"><a class="link" href="#teacher">Teacher? Create a challenge</a></p>
+    </form>
+  </main>`);
+  const code=$('#code'); code.addEventListener('input',()=>{ code.value=code.value.replace(/\D/g,'').slice(0,6); });
+  (prefill?$('#nick'):code).focus();
+  $('#jf').onsubmit=async e=>{
+    e.preventDefault();
+    const c=code.value.trim(), n=$('#nick').value.trim().replace(/\s+/g,' ').toLocaleUpperCase();
+    $('#nick').value=n;
+    if(c.length!==6){ $('#err').textContent='The code has 6 digits.'; return; }
+    if(n.length<2){ $('#err').textContent='Enter your name so the teacher can recognize you.'; return; }
+    SFX.unlock(); $('#go').disabled=true; $('#err').textContent='';
+    try{
+      const g=await db.activeGameByCode(c);
+      if(!g){ $('#err').textContent='No open game matches that code. Check the number on the teacher screen.'; $('#go').disabled=false; return; }
+      const p=await db.insert('players',{game_id:g.id,nickname:n});
+      sessionStorage.setItem(SESSION,JSON.stringify({gameId:g.id,playerId:p.id}));
+      attach(g,p);
+    }catch(err){
+      $('#go').disabled=false;
+      $('#err').textContent=err&&err.code==='23505'?'That name is already in use. Add your surname or an initial.':'Could not connect. Check your internet and try again.';
+    }
+  };
+}
+function attach(g,p){
+  S.player=p; S.idx=-1; S.mine={};
+  if(S.unsub) S.unsub();
+  S.unsub=db.watch('games','UPDATE','id',g.id,onGame);
+  onGame(g);
+}
+function meTag(extra=''){ return `<div class="me-tag">${esc(S.player.nickname)}${extra}</div>`; }
+function pView(html,cls=''){ clearInterval(S.tick); return view(`<main class="pstate ${cls}">${html}</main>${meTag()}`); }
+
+async function onGame(g){
+  S.game=g;
+  if(g.status==='lobby') return pView(`<div class="shape-lg pulse">${SHAPES[0]}</div><h2>You're in!</h2><p>Watch the teacher's screen. The challenge will begin soon.</p>`);
+  if(g.status==='question'){
+    const cur=g.current; if(!cur) return;
+    if(cur.index!==S.idx){ S.idx=cur.index; S.shownAt=performance.now(); SFX.play('go'); }
+    if(S.mine[cur.index]!=null) return sentView(S.mine[cur.index]);
+    return questionView(cur);
+  }
+  const me=await db.get('players',S.player.id).catch(()=>null);
+  if(!me){ sessionStorage.removeItem(SESSION); return pView(`<h2>You left the game</h2><p>The teacher removed you from this challenge. You can join again with another name.</p><button class="btn" onclick="playerJoin('${esc(g.code)}')">Join again</button>`); }
+  if(g.status==='reveal'){
+    const cur=g.current||{}, mine=S.mine[cur.index], right=g.reveal&&mine===g.reveal.correct;
+    const correctTxt=cur.choices?cur.choices[g.reveal.correct]:'';
+    SFX.play(right?'correct':'wrong');
+    if(mine==null) return pView(`<h2>Time is up</h2><p>The correct answer was ${esc(correctTxt)}</p><p>Your rank is <b>${me.rank??'–'}</b></p>`,'bad');
+    if(right) return pView(`<h2>Correct!</h2><div class="big">+${fmtPts(me.last_points||0)}</div>${me.streak>1?`<p>${me.streak} correct answers in a row</p>`:''}<p>Your rank is <b>${me.rank??'–'}</b></p>`,'ok');
+    return pView(`<h2>Incorrect</h2><p>The correct answer was ${esc(correctTxt)}</p><p>Your rank is <b>${me.rank??'–'}</b></p>`,'bad');
+  }
+  if(g.status==='leaderboard') return pView(`<p>Your rank</p><div class="big">${me.rank??'–'}</div><p>${fmtPts(me.score||0)} points</p>`);
+  if(g.status==='ended'){ sessionStorage.removeItem(SESSION); SFX.play('end');
+    return pView(`<h2>Challenge complete!</h2><p>You finished in place</p><div class="big">${me.rank??'–'}</div><p>${fmtPts(me.score||0)} points</p><a class="link" href="./">Play another challenge</a>`); }
+}
+function questionView(cur){
+  clearInterval(S.tick);
+  view(`
+  <main class="pq">
+    <div class="pq-top"><span>Question ${cur.index+1} · ${esc(S.player.nickname)}</span><span id="pt">${cur.limit} s</span></div>
+    <div class="pbar"><i id="pb"></i></div>
+    <div class="pq-text">${esc(cur.text)}${cur.fig?`<div class="qfig">${renderFig(cur.fig)}</div>`:''}</div>
+    <div class="ptiles">${cur.choices.map((c,i)=>`<button class="ptile c${i}" data-i="${i}"><span class="shp" aria-label="${SHAPE_NAMES[i]}">${SHAPES[i]}</span><span>${esc(c)}</span></button>`).join('')}</div>
+  </main>`);
+  document.querySelectorAll('.ptile').forEach(b=>b.onclick=()=>answer(cur,+b.dataset.i));
+  S.tick=setInterval(()=>{
+    const left=Math.max(0,cur.limit-(performance.now()-S.shownAt)/1000);
+    const pb=$('#pb'); if(!pb) return clearInterval(S.tick);
+    pb.style.transform=`scaleX(${left/cur.limit})`; $('#pt').textContent=Math.ceil(left)+' s';
+    if(left<=0){ clearInterval(S.tick); document.querySelectorAll('.ptile').forEach(b=>b.disabled=true); $('#pt').textContent='Time is up'; }
+  },100);
+}
+function answer(cur,i){
+  if(S.mine[cur.index]!=null) return;
+  const ms=Math.min(Math.round(performance.now()-S.shownAt),cur.limit*1000);
+  S.mine[cur.index]=i; SFX.play('tap'); sentView(i);
+  db.insert('answers',{game_id:S.game.id,player_id:S.player.id,q_index:cur.index,choice:i,elapsed_ms:ms}).catch(()=>{});
+}
+function sentView(i){
+  pView(`<div class="shape-lg" style="color:#fff">${SHAPES[i]}</div><h2>Answer submitted</h2><p>Wait for the timer to finish.</p>`,'');
+  const s=document.querySelector('.shape-lg svg'); if(s) s.style.fill=['var(--gold)','var(--teal)','var(--coral)','var(--sky)'][i];
+}
+
+/* ---------------- Router ---------------- */
+async function route(){
+  document.body.classList.toggle('is-host',location.hash==='#teacher');
+  if(location.hash==='#teacher'){ if(H.phase==='setup') hostSetup(); return; }
+  const params=new URLSearchParams(location.search);
+  try{
+    const s=JSON.parse(sessionStorage.getItem(SESSION)||'null');
+    if(s){ const [g,p]=await Promise.all([db.get('games',s.gameId),db.get('players',s.playerId)]);
+      if(g&&p&&g.status!=='ended') return attach(g,p); sessionStorage.removeItem(SESSION); }
+  }catch(e){}
+  playerJoin((params.get('code')||'').replace(/\D/g,'').slice(0,6));
+}
+window.addEventListener('hashchange',route);
+window.addEventListener('load',()=>renderMath($('#app')));
+$('#snd').onclick=()=>SFX.toggle(); SFX.paintBtn();
+route();
+</script>
+</body>
+</html>
